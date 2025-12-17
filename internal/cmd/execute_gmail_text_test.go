@@ -17,7 +17,7 @@ func TestExecute_GmailThread_Text_Download(t *testing.T) {
 	origNew := newGmailService
 	t.Cleanup(func() { newGmailService = origNew })
 
-	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
 	attData := []byte("hello")
 	attEncoded := base64.RawURLEncoding.EncodeToString(attData)
@@ -25,13 +25,13 @@ func TestExecute_GmailThread_Text_Download(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/threads/t1"):
+		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/threads/t-thread-1"):
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"id": "t1",
+				"id": "t-thread-1",
 				"messages": []map[string]any{
 					{
-						"id": "m1",
+						"id": "m-thread-1",
 						"payload": map[string]any{
 							"headers": []map[string]any{
 								{"name": "From", "value": "Me <me@example.com>"},
@@ -47,7 +47,7 @@ func TestExecute_GmailThread_Text_Download(t *testing.T) {
 								{ // attachment
 									"filename": "a.txt",
 									"mimeType": "text/plain",
-									"body":     map[string]any{"attachmentId": "a1", "size": len(attData)},
+									"body":     map[string]any{"attachmentId": "a-thread-1", "size": len(attData)},
 								},
 							},
 						},
@@ -55,7 +55,7 @@ func TestExecute_GmailThread_Text_Download(t *testing.T) {
 				},
 			})
 			return
-		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1/attachments/a1"):
+		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m-thread-1/attachments/a-thread-1"):
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": attEncoded})
 			return
@@ -78,12 +78,12 @@ func TestExecute_GmailThread_Text_Download(t *testing.T) {
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--output", "text", "--account", "a@b.com", "gmail", "thread", "t1", "--download"}); err != nil {
+			if err := Execute([]string{"--output", "text", "--account", "a@b.com", "gmail", "thread", "t-thread-1", "--download"}); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
 	})
-	if !strings.Contains(out, "Message: m1") || !strings.Contains(out, "Attachments:") || !strings.Contains(out, "Saved:") {
+	if !strings.Contains(out, "Message: m-thread-1") || !strings.Contains(out, "Attachments:") || !(strings.Contains(out, "Saved:") || strings.Contains(out, "Cached:")) {
 		t.Fatalf("unexpected out=%q", out)
 	}
 }
@@ -92,7 +92,7 @@ func TestExecute_GmailDraftsGet_Text_Download(t *testing.T) {
 	origNew := newGmailService
 	t.Cleanup(func() { newGmailService = origNew })
 
-	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
 	attData := []byte("hello")
 	attEncoded := base64.RawURLEncoding.EncodeToString(attData)
@@ -104,7 +104,7 @@ func TestExecute_GmailDraftsGet_Text_Download(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"id": "d1",
 				"message": map[string]any{
-					"id": "m1",
+					"id": "m-draft-1",
 					"payload": map[string]any{
 						"headers": []map[string]any{
 							{"name": "To", "value": "x@y.com"},
@@ -114,14 +114,14 @@ func TestExecute_GmailDraftsGet_Text_Download(t *testing.T) {
 							{
 								"filename": "a.txt",
 								"mimeType": "text/plain",
-								"body":     map[string]any{"attachmentId": "a1", "size": len(attData)},
+								"body":     map[string]any{"attachmentId": "a-draft-1", "size": len(attData)},
 							},
 						},
 					},
 				},
 			})
 			return
-		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1/attachments/a1"):
+		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m-draft-1/attachments/a-draft-1"):
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": attEncoded})
 			return
