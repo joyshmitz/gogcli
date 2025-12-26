@@ -11,6 +11,10 @@
 - Auth: browser-based accounts manager (`gog auth manage`).
 - DX: shell completion (`gog completion ...`) and `--verbose` logging.
 
+### Fixed
+
+- Gmail: `gog gmail attachment` download now works reliably; avoid re-fetching payload for filename inference and accept padded base64 responses.
+
 ## 0.3.0 - 2025-12-26
 
 ### Added

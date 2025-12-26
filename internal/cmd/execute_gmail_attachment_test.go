@@ -22,7 +22,7 @@ func TestExecute_GmailAttachment_OutPath_JSON(t *testing.T) {
 
 	var attachmentCalls int32
 	attachmentData := []byte("abc")
-	attachmentEncoded := base64.RawURLEncoding.EncodeToString(attachmentData)
+	attachmentEncoded := base64.URLEncoding.EncodeToString(attachmentData)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -31,28 +31,10 @@ func TestExecute_GmailAttachment_OutPath_JSON(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": attachmentEncoded})
 			return
-		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1"):
-			if got := r.URL.Query().Get("format"); got != "full" {
-				t.Fatalf("format=%q", got)
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"id": "m1",
-				"payload": map[string]any{
-					"parts": []map[string]any{
-						{
-							"filename": "file.txt",
-							"mimeType": "text/plain",
-							"body": map[string]any{
-								"attachmentId": "a1",
-								"size":         len(attachmentData),
-							},
-						},
-					},
-				},
-			})
-			return
 		default:
+			if strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1") && !strings.Contains(r.URL.Path, "/attachments/") {
+				t.Fatalf("unexpected messages.get call: %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 			return
 		}
@@ -101,6 +83,9 @@ func TestExecute_GmailAttachment_OutPath_JSON(t *testing.T) {
 	if parsed1["cached"] != false {
 		t.Fatalf("cached=%v", parsed1["cached"])
 	}
+	if parsed1["bytes"] != float64(len(attachmentData)) {
+		t.Fatalf("bytes=%v", parsed1["bytes"])
+	}
 
 	b, err := os.ReadFile(outPath)
 	if err != nil {
@@ -132,28 +117,10 @@ func TestExecute_GmailAttachment_NameOverride_ConfigDir_JSON(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": attachmentEncoded})
 			return
-		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1"):
-			if got := r.URL.Query().Get("format"); got != "full" {
-				t.Fatalf("format=%q", got)
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"id": "m1",
-				"payload": map[string]any{
-					"parts": []map[string]any{
-						{
-							"filename": "file.txt",
-							"mimeType": "text/plain",
-							"body": map[string]any{
-								"attachmentId": "a1",
-								"size":         len(attachmentData),
-							},
-						},
-					},
-				},
-			})
-			return
 		default:
+			if strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1") && !strings.Contains(r.URL.Path, "/attachments/") {
+				t.Fatalf("unexpected messages.get call: %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 			return
 		}
@@ -205,26 +172,14 @@ func TestExecute_GmailAttachment_NotFound(t *testing.T) {
 	t.Cleanup(func() { newGmailService = origNew })
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1") {
+		if strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1/attachments/") {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id": "m1",
-			"payload": map[string]any{
-				"parts": []map[string]any{
-					{
-						"filename": "file.txt",
-						"mimeType": "text/plain",
-						"body": map[string]any{
-							"attachmentId": "other",
-							"size":         3,
-						},
-					},
-				},
-			},
-		})
+		if strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1") {
+			t.Fatalf("unexpected messages.get call: %s", r.URL.Path)
+		}
+		http.NotFound(w, r)
 	}))
 	defer srv.Close()
 
@@ -248,9 +203,6 @@ func TestExecute_GmailAttachment_NotFound(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "attachment not found") {
-		t.Fatalf("unexpected error: %v", err)
 	}
 	if _, statErr := os.Stat(outPath); !os.IsNotExist(statErr) {
 		t.Fatalf("expected no file written, stat=%v", statErr)

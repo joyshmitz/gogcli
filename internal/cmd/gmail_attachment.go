@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,33 +40,38 @@ func newGmailAttachmentCmd(flags *rootFlags) *cobra.Command {
 				return err
 			}
 
-			info, err := findAttachmentInfo(cmd, svc, messageID, attachmentID, name)
-			if err != nil {
-				return err
-			}
-
 			if strings.TrimSpace(outPath) == "" {
 				dir, dirErr := config.EnsureGmailAttachmentsDir()
 				if dirErr != nil {
 					return dirErr
 				}
-				path, cached, dlErr := downloadAttachment(cmd, svc, messageID, info, dir)
+				filename := strings.TrimSpace(name)
+				if filename == "" {
+					filename = "attachment.bin"
+				}
+				safeFilename := filepath.Base(filename)
+				if safeFilename == "" || safeFilename == "." || safeFilename == ".." {
+					safeFilename = "attachment.bin"
+				}
+				shortID := attachmentID
+				if len(shortID) > 8 {
+					shortID = shortID[:8]
+				}
+				destPath := filepath.Join(dir, fmt.Sprintf("%s_%s_%s", messageID, shortID, safeFilename))
+				path, cached, bytes, dlErr := downloadAttachmentToPath(cmd, svc, messageID, attachmentID, destPath, -1)
 				if dlErr != nil {
 					return dlErr
 				}
 				if outfmt.IsJSON(cmd.Context()) {
-					return outfmt.WriteJSON(os.Stdout, map[string]any{"path": path, "cached": cached})
+					return outfmt.WriteJSON(os.Stdout, map[string]any{"path": path, "cached": cached, "bytes": bytes})
 				}
 				u.Out().Printf("path\t%s", path)
 				u.Out().Printf("cached\t%t", cached)
+				u.Out().Printf("bytes\t%d", bytes)
 				return nil
 			}
 
-			expectedSize := info.Size
-			if expectedSize <= 0 {
-				expectedSize = -1
-			}
-			path, cached, bytes, err := downloadAttachmentToPath(cmd, svc, messageID, info.AttachmentID, outPath, expectedSize)
+			path, cached, bytes, err := downloadAttachmentToPath(cmd, svc, messageID, attachmentID, outPath, -1)
 			if err != nil {
 				return err
 			}
@@ -80,30 +86,8 @@ func newGmailAttachmentCmd(flags *rootFlags) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&outPath, "out", "", "Write to a specific path (default: gogcli config dir)")
-	cmd.Flags().StringVar(&name, "name", "", "Override inferred filename (only used when --out is empty)")
+	cmd.Flags().StringVar(&name, "name", "", "Filename (only used when --out is empty)")
 	return cmd
-}
-
-func findAttachmentInfo(cmd *cobra.Command, svc *gmail.Service, messageID string, attachmentID string, filename string) (attachmentInfo, error) {
-	msg, err := svc.Users.Messages.Get("me", messageID).Format("full").Context(cmd.Context()).Do()
-	if err != nil {
-		return attachmentInfo{}, err
-	}
-	if msg == nil {
-		return attachmentInfo{}, errors.New("message not found")
-	}
-	for _, a := range collectAttachments(msg.Payload) {
-		if a.AttachmentID == attachmentID {
-			if strings.TrimSpace(filename) != "" {
-				a.Filename = filename
-			}
-			if strings.TrimSpace(a.Filename) == "" {
-				a.Filename = "attachment.bin"
-			}
-			return a, nil
-		}
-	}
-	return attachmentInfo{}, errors.New("attachment not found in message payload (need full payload to infer filename)")
 }
 
 func downloadAttachmentToPath(
@@ -122,6 +106,10 @@ func downloadAttachmentToPath(
 		if st, err := os.Stat(outPath); err == nil && st.Size() == expectedSize {
 			return outPath, true, st.Size(), nil
 		}
+	} else if expectedSize == -1 {
+		if st, err := os.Stat(outPath); err == nil && st.Size() > 0 {
+			return outPath, true, st.Size(), nil
+		}
 	}
 
 	body, err := svc.Users.Messages.Attachments.Get("me", messageID, attachmentID).Context(cmd.Context()).Do()
@@ -133,7 +121,11 @@ func downloadAttachmentToPath(
 	}
 	data, err := base64.RawURLEncoding.DecodeString(body.Data)
 	if err != nil {
-		return "", false, 0, err
+		// Gmail can return padded base64url; accept both.
+		data, err = base64.URLEncoding.DecodeString(body.Data)
+		if err != nil {
+			return "", false, 0, err
+		}
 	}
 
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
