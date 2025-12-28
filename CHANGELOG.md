@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.4.1 - Unreleased
+## 0.4.2 - Unreleased
+
+- (next)
+
+## 0.4.1 - 2025-12-28
 
 - macOS: release binaries now built with cgo so Keychain backend works (no encrypted file-store fallback / password prompts; Issue #19).
 
