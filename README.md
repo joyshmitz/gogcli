@@ -135,6 +135,23 @@ gog auth add you@gmail.com --services sheets --force-consent
 - `GOG_COLOR` - Color mode: `auto` (default), `always`, or `never`
 - `GOG_KEYRING_BACKEND` - Force keyring backend: `auto` (default), `keychain`, or `file` (use `file` to avoid Keychain prompts; pair with `GOG_KEYRING_PASSWORD`)
 - `GOG_KEYRING_PASSWORD` - Password for encrypted on-disk keyring (Linux/WSL/container environments without OS keychain)
+
+### Config File (JSON5)
+
+Config file path:
+
+```
+$(os.UserConfigDir())/gogcli/config.json
+```
+
+Example (JSON5 supports comments and trailing commas):
+
+```json5
+{
+  // Avoid macOS Keychain prompts
+  keyring_backend: "file",
+}
+```
  
 ## Security
 

@@ -2,6 +2,7 @@
 
 ## 0.5.0 - Unreleased
 
+- Config: add JSON5 `config.json` (comments ok) and `gog auth status`/help now show keyring backend + config path.
 - Auth: `gog auth list --check` validates refresh tokens by exchanging for an access token.
 - Auth: OAuth browser flow now finishes immediately after callback (no 30s “stuck” delay).
 - Homebrew: tap now installs GitHub release binaries (macOS) to reduce Keychain prompt churn.

@@ -49,9 +49,35 @@ var (
 	errInvalidKeyringBackend = errors.New("invalid keyring backend")
 )
 
-func allowedBackendsFromEnv() ([]keyring.BackendType, error) {
-	v := strings.ToLower(strings.TrimSpace(os.Getenv(keyringBackendEnv)))
-	switch v {
+type KeyringBackendInfo struct {
+	Value  string
+	Source string
+}
+
+const (
+	keyringBackendSourceEnv     = "env"
+	keyringBackendSourceConfig  = "config"
+	keyringBackendSourceDefault = "default"
+)
+
+func ResolveKeyringBackendInfo() (KeyringBackendInfo, error) {
+	if v := strings.TrimSpace(os.Getenv(keyringBackendEnv)); v != "" {
+		return KeyringBackendInfo{Value: strings.ToLower(v), Source: keyringBackendSourceEnv}, nil
+	}
+
+	cfg, err := config.ReadConfig()
+	if err != nil {
+		return KeyringBackendInfo{}, err
+	}
+	if cfg.KeyringBackend != "" {
+		return KeyringBackendInfo{Value: cfg.KeyringBackend, Source: keyringBackendSourceConfig}, nil
+	}
+
+	return KeyringBackendInfo{Value: "auto", Source: keyringBackendSourceDefault}, nil
+}
+
+func allowedBackends(info KeyringBackendInfo) ([]keyring.BackendType, error) {
+	switch info.Value {
 	case "", "auto":
 		return nil, nil
 	case "keychain":
@@ -59,7 +85,7 @@ func allowedBackendsFromEnv() ([]keyring.BackendType, error) {
 	case "file":
 		return []keyring.BackendType{keyring.FileBackend}, nil
 	default:
-		return nil, fmt.Errorf("%w: %q (expected auto, keychain, or file)", errInvalidKeyringBackend, v)
+		return nil, fmt.Errorf("%w: %q (expected auto, keychain, or file)", errInvalidKeyringBackend, info.Value)
 	}
 }
 
@@ -103,7 +129,12 @@ func OpenDefault() (Store, error) {
 		return nil, fmt.Errorf("ensure keyring dir: %w", err)
 	}
 
-	allowedBackends, err := allowedBackendsFromEnv()
+	backendInfo, err := ResolveKeyringBackendInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	allowedBackends, err := allowedBackends(backendInfo)
 	if err != nil {
 		return nil, err
 	}

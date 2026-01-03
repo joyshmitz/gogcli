@@ -167,6 +167,43 @@ func TestAuthTokens_ExportImportRoundtrip_JSON(t *testing.T) {
 	}
 }
 
+func TestAuthStatus_JSON(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("GOG_KEYRING_BACKEND", "file")
+
+	out := captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			if err := Execute([]string{"--json", "auth", "status"}); err != nil {
+				t.Fatalf("Execute: %v", err)
+			}
+		})
+	})
+
+	var payload struct {
+		Config struct {
+			Path   string `json:"path"`
+			Exists bool   `json:"exists"`
+		} `json:"config"`
+		Keyring struct {
+			Backend string `json:"backend"`
+			Source  string `json:"source"`
+		} `json:"keyring"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if payload.Keyring.Backend != "file" {
+		t.Fatalf("unexpected backend: %q", payload.Keyring.Backend)
+	}
+	if payload.Keyring.Source != "env" {
+		t.Fatalf("unexpected backend source: %q", payload.Keyring.Source)
+	}
+	if payload.Config.Path == "" {
+		t.Fatalf("expected config path")
+	}
+}
+
 func TestAuthTokensExport_RequiresOut(t *testing.T) {
 	err := Execute([]string{"--json", "auth", "tokens", "export", "a@b.com"})
 	if err == nil {
