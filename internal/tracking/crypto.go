@@ -20,8 +20,6 @@ type PixelPayload struct {
 	SentAt      int64  `json:"t"`
 }
 
-var errCiphertextTooShort = errors.New("ciphertext too short")
-
 // Encrypt encrypts a PixelPayload into a URL-safe base64 blob using AES-GCM
 func Encrypt(payload *PixelPayload, keyBase64 string) (string, error) {
 	key, err := base64.StdEncoding.DecodeString(keyBase64)
