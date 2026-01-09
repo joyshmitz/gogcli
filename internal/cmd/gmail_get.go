@@ -85,6 +85,11 @@ func (c *GmailGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 		if unsubscribe != "" {
 			payload["unsubscribe"] = unsubscribe
 		}
+		if format == gmailFormatFull {
+			if body := bestBodyText(msg.Payload); body != "" {
+				payload["body"] = body
+			}
+		}
 		return outfmt.WriteJSON(os.Stdout, payload)
 	}
 

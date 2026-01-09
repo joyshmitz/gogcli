@@ -56,6 +56,18 @@ func TestBestBodyTextPrefersPlain(t *testing.T) {
 	}
 }
 
+func TestBestBodyText_MimeTypeWithParams(t *testing.T) {
+	plain := base64.RawURLEncoding.EncodeToString([]byte("plain"))
+	p := &gmail.MessagePart{
+		Parts: []*gmail.MessagePart{
+			{MimeType: "text/plain; charset=\"utf-8\"", Body: &gmail.MessagePartBody{Data: plain}},
+		},
+	}
+	if got := bestBodyText(p); got != "plain" {
+		t.Fatalf("unexpected: %q", got)
+	}
+}
+
 func TestDecodeBase64URL(t *testing.T) {
 	got, err := decodeBase64URL(base64.RawURLEncoding.EncodeToString([]byte("ok")))
 	if err != nil {
@@ -63,6 +75,13 @@ func TestDecodeBase64URL(t *testing.T) {
 	}
 	if got != "ok" {
 		t.Fatalf("unexpected: %q", got)
+	}
+	got, err = decodeBase64URL(base64.URLEncoding.EncodeToString([]byte("ok")))
+	if err != nil {
+		t.Fatalf("err padded: %v", err)
+	}
+	if got != "ok" {
+		t.Fatalf("unexpected padded: %q", got)
 	}
 	if _, err := decodeBase64URL("!!!"); err == nil {
 		t.Fatalf("expected error")

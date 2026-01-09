@@ -30,6 +30,7 @@
 - Gmail: add `gog gmail labels create` command (#42) — thanks @ryatkins.
 - Gmail: add Gmail settings scope for filter operations (#48) — thanks @camerondare.
 - Gmail: show last message date in thread search; add `--oldest` for first message date (#49) — thanks @kyupark.
+- Gmail: `gog gmail get --json` now includes extracted `body` for `--format full`; MIME params + padded base64url supported (#52) — thanks @antons.
 - Contacts: add `gog contacts other delete` for removing other contacts (#43) — thanks @salmonumbrella.
 - Keep: add Workspace-only Google Keep support (service account + domain-wide delegation) (#32) — thanks @koala73.
 - Auth: `gog auth add` now defaults to `--services user` (`--services all` accepted as an alias for backwards compatibility).

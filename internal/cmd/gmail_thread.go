@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"mime"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -466,7 +467,7 @@ func findPartBody(p *gmail.MessagePart, mimeType string) string {
 	if p == nil {
 		return ""
 	}
-	if p.MimeType == mimeType && p.Body != nil && p.Body.Data != "" {
+	if mimeTypeMatches(p.MimeType, mimeType) && p.Body != nil && p.Body.Data != "" {
 		s, err := decodeBase64URL(p.Body.Data)
 		if err == nil {
 			return s
@@ -480,10 +481,33 @@ func findPartBody(p *gmail.MessagePart, mimeType string) string {
 	return ""
 }
 
+func mimeTypeMatches(partType string, want string) bool {
+	return normalizeMimeType(partType) == normalizeMimeType(want)
+}
+
+func normalizeMimeType(value string) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" {
+		return ""
+	}
+	mediaType, _, err := mime.ParseMediaType(value)
+	if err == nil && mediaType != "" {
+		return strings.ToLower(mediaType)
+	}
+	if idx := strings.Index(value, ";"); idx != -1 {
+		return strings.TrimSpace(value[:idx])
+	}
+	return value
+}
+
 func decodeBase64URL(s string) (string, error) {
 	b, err := base64.RawURLEncoding.DecodeString(s)
 	if err != nil {
-		return "", err
+		// Gmail can return padded base64url; accept both.
+		b, err = base64.URLEncoding.DecodeString(s)
+		if err != nil {
+			return "", err
+		}
 	}
 	return string(b), nil
 }
