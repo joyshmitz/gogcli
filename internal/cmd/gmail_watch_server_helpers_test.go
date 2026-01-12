@@ -113,6 +113,9 @@ func TestIsStaleHistoryError_MoreCases(t *testing.T) {
 	if !isStaleHistoryError(&googleapi.Error{Code: http.StatusBadRequest, Message: "History too old"}) {
 		t.Fatalf("expected stale history error")
 	}
+	if !isStaleHistoryError(&googleapi.Error{Code: http.StatusNotFound, Message: "Requested entity was not found."}) {
+		t.Fatalf("expected stale history error for not found")
+	}
 	if !isStaleHistoryError(errors.New("missing history")) {
 		t.Fatalf("expected stale history error from message")
 	}

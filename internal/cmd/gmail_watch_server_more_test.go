@@ -303,6 +303,95 @@ func TestGmailWatchServer_HandlePush_DuplicateMessageID(t *testing.T) {
 	}
 }
 
+func TestGmailWatchServer_HandlePush_SkipsMissingMessages(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	store, err := newGmailWatchStore("a@b.com")
+	if err != nil {
+		t.Fatalf("store: %v", err)
+	}
+	if updateErr := store.Update(func(s *gmailWatchState) error {
+		s.Account = "a@b.com"
+		s.HistoryID = "100"
+		return nil
+	}); updateErr != nil {
+		t.Fatalf("seed: %v", updateErr)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/history"):
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"historyId": "200",
+				"history": []map[string]any{
+					{"messagesAdded": []map[string]any{
+						{"message": map[string]any{"id": "m1"}},
+						{"message": map[string]any{"id": "m2"}},
+					}},
+				},
+			})
+			return
+		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m1"):
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id":       "m1",
+				"threadId": "t1",
+				"snippet":  "hi",
+				"payload":  map[string]any{"headers": []map[string]any{{"name": "Subject", "value": "S"}}},
+			})
+			return
+		case strings.Contains(r.URL.Path, "/gmail/v1/users/me/messages/m2"):
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"error": map[string]any{
+					"code":    http.StatusNotFound,
+					"message": "Requested entity was not found.",
+					"errors": []map[string]any{
+						{"reason": "notFound", "message": "Requested entity was not found."},
+					},
+				},
+			})
+			return
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	gsvc, err := gmail.NewService(context.Background(),
+		option.WithoutAuthentication(),
+		option.WithHTTPClient(srv.Client()),
+		option.WithEndpoint(srv.URL+"/"),
+	)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
+
+	server := &gmailWatchServer{
+		cfg: gmailWatchServeConfig{
+			Account:    "a@b.com",
+			HistoryMax: 10,
+			ResyncMax:  10,
+		},
+		store:      store,
+		newService: func(context.Context, string) (*gmail.Service, error) { return gsvc, nil },
+		hookClient: srv.Client(),
+		logf:       func(string, ...any) {},
+		warnf:      func(string, ...any) {},
+	}
+
+	got, err := server.handlePush(context.Background(), gmailPushPayload{EmailAddress: "a@b.com", HistoryID: "200"})
+	if err != nil {
+		t.Fatalf("handlePush: %v", err)
+	}
+	if got == nil || len(got.Messages) != 1 || got.Messages[0].ID != "m1" {
+		t.Fatalf("unexpected: %#v", got)
+	}
+}
+
 func TestGmailWatchServer_SendHook_UpdatesState(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

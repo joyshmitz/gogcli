@@ -279,6 +279,9 @@ func (s *gmailWatchServer) fetchMessages(ctx context.Context, svc *gmail.Service
 			Context(ctx).
 			Do()
 		if err != nil {
+			if isNotFoundAPIError(err) {
+				continue
+			}
 			return nil, err
 		}
 		if msg == nil {
@@ -442,12 +445,39 @@ func isStaleHistoryError(err error) bool {
 	var gerr *googleapi.Error
 	if errors.As(err, &gerr) {
 		if gerr.Code == http.StatusBadRequest || gerr.Code == http.StatusNotFound {
-			if strings.Contains(strings.ToLower(gerr.Message), "history") {
+			msg := strings.ToLower(gerr.Message)
+			if strings.Contains(msg, "history") {
+				return true
+			}
+			for _, item := range gerr.Errors {
+				if strings.Contains(strings.ToLower(item.Message), "history") {
+					return true
+				}
+				if gerr.Code == http.StatusNotFound && strings.EqualFold(strings.TrimSpace(item.Reason), "notfound") {
+					return true
+				}
+			}
+			if gerr.Code == http.StatusNotFound && strings.Contains(msg, "not found") {
 				return true
 			}
 		}
 	}
 	return strings.Contains(strings.ToLower(err.Error()), "history")
+}
+
+func isNotFoundAPIError(err error) bool {
+	var gerr *googleapi.Error
+	if errors.As(err, &gerr) {
+		if gerr.Code == http.StatusNotFound {
+			return true
+		}
+		for _, item := range gerr.Errors {
+			if strings.EqualFold(strings.TrimSpace(item.Reason), "notfound") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func collectHistoryMessageIDs(resp *gmail.ListHistoryResponse) []string {
