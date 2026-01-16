@@ -201,3 +201,31 @@ func TestSheetsClearMetadataCreate_ValidationErrors(t *testing.T) {
 		t.Fatalf("expected create missing title error")
 	}
 }
+
+func TestSheetsFormat_ValidationErrors(t *testing.T) {
+	u, uiErr := ui.New(ui.Options{Stdout: io.Discard, Stderr: io.Discard, Color: "never"})
+	if uiErr != nil {
+		t.Fatalf("ui.New: %v", uiErr)
+	}
+	ctx := ui.WithUI(context.Background(), u)
+	flags := &RootFlags{Account: "a@b.com"}
+
+	if err := (&SheetsFormatCmd{}).Run(ctx, flags); err == nil {
+		t.Fatalf("expected format missing spreadsheetId error")
+	}
+	if err := (&SheetsFormatCmd{SpreadsheetID: "s1"}).Run(ctx, flags); err == nil {
+		t.Fatalf("expected format missing range error")
+	}
+	if err := (&SheetsFormatCmd{SpreadsheetID: "s1", Range: "Sheet1!A1"}).Run(ctx, flags); err == nil {
+		t.Fatalf("expected format missing format-json error")
+	}
+	if err := (&SheetsFormatCmd{SpreadsheetID: "s1", Range: "Sheet1!A1", FormatJSON: "{\"textFormat\":{\"bold\":true}}"}).Run(ctx, flags); err == nil {
+		t.Fatalf("expected format missing format-fields error")
+	}
+	if err := (&SheetsFormatCmd{SpreadsheetID: "s1", Range: "Sheet1!A1", FormatJSON: "nope", FormatFields: "userEnteredFormat.textFormat.bold"}).Run(ctx, flags); err == nil {
+		t.Fatalf("expected format invalid json error")
+	}
+	if err := (&SheetsFormatCmd{SpreadsheetID: "s1", Range: "A1:B2", FormatJSON: "{\"textFormat\":{\"bold\":true}}", FormatFields: "userEnteredFormat.textFormat.bold"}).Run(ctx, flags); err == nil {
+		t.Fatalf("expected format missing sheet name error")
+	}
+}

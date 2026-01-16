@@ -610,6 +610,7 @@ gog slides export <presentationId> --format pdf --out ./deck.pdf
 # Sheets
 gog sheets copy <spreadsheetId> "My Sheet Copy"
 gog sheets export <spreadsheetId> --format pdf --out ./sheet.pdf
+gog sheets format <spreadsheetId> 'Sheet1!A1:B2' --format-json '{"textFormat":{"bold":true}}' --format-fields 'userEnteredFormat.textFormat.bold'
 ```
 
 ### Contacts
@@ -678,6 +679,9 @@ gog sheets update <spreadsheetId> 'Sheet1!A1:C1' 'new|row|data' --copy-validatio
 gog sheets append <spreadsheetId> 'Sheet1!A:C' 'new|row|data'
 gog sheets append <spreadsheetId> 'Sheet1!A:C' 'new|row|data' --copy-validation-from 'Sheet1!A2:C2'
 gog sheets clear <spreadsheetId> 'Sheet1!A1:B10'
+
+# Format
+gog sheets format <spreadsheetId> 'Sheet1!A1:B2' --format-json '{"textFormat":{"bold":true}}' --format-fields 'userEnteredFormat.textFormat.bold'
 
 # Create
 gog sheets create "My New Spreadsheet" --sheets "Sheet1,Sheet2"
