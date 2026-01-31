@@ -182,7 +182,6 @@ func (c *DriveSearchCmd) Run(ctx context.Context, flags *RootFlags) error {
 		PageToken(c.Page).
 		OrderBy("modifiedTime desc")
 	call = driveFilesListCallWithDriveSupport(call, c.AllDrives)
-
 	resp, err := call.
 		Fields("nextPageToken, files(id, name, mimeType, size, modifiedTime, parents, webViewLink)").
 		Context(ctx).
