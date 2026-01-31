@@ -1246,6 +1246,7 @@ func driveExportMimeType(googleMimeType string) string {
 
 func driveExportMimeTypeForFormat(googleMimeType string, format string) (string, error) {
 	format = strings.ToLower(strings.TrimSpace(format))
+	if format == "" {
 	if format == "" || format == formatAuto {
 		return driveExportMimeType(googleMimeType), nil
 	}
