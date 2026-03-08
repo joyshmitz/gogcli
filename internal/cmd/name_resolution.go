@@ -9,6 +9,8 @@ import (
 
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/tasks/v1"
+
+	"github.com/steipete/gogcli/internal/selectorutil"
 )
 
 const (
@@ -66,7 +68,7 @@ func resolveTasklistID(ctx context.Context, svc *tasks.Service, input string) (s
 		return in, nil
 	}
 
-	var options []selectorMatch
+	var options []selectorutil.Match
 	seenTokens := map[string]bool{}
 	pageToken := ""
 	for {
@@ -87,7 +89,7 @@ func resolveTasklistID(ctx context.Context, svc *tasks.Service, input string) (s
 			if tl == nil {
 				continue
 			}
-			options = append(options, selectorMatch{
+			options = append(options, selectorutil.Match{
 				ID:   strings.TrimSpace(tl.Id),
 				Name: strings.TrimSpace(tl.Title),
 			})
@@ -99,12 +101,20 @@ func resolveTasklistID(ctx context.Context, svc *tasks.Service, input string) (s
 		pageToken = next
 	}
 
-	match, found, err := findByIDOrCaseFoldName(in, "tasklist", options)
-	if err != nil {
-		return "", err
-	}
+	match, found, ambiguous := selectorutil.FindByIDOrCaseFoldName(in, options)
 	if found {
 		return match.ID, nil
+	}
+	if len(ambiguous) > 0 {
+		parts := make([]string, 0, len(ambiguous))
+		for _, match := range ambiguous {
+			label := match.Name
+			if label == "" {
+				label = "(unnamed)"
+			}
+			parts = append(parts, fmt.Sprintf("%s (%s)", label, match.ID))
+		}
+		return "", usagef("ambiguous tasklist %q; matches: %s", in, strings.Join(parts, ", "))
 	}
 
 	return in, nil

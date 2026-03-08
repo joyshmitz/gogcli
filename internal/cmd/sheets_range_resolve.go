@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"google.golang.org/api/sheets/v4"
+
+	"github.com/steipete/gogcli/internal/selectorutil"
 )
 
 type spreadsheetRangeCatalog struct {
@@ -117,22 +119,30 @@ func resolveNamedRangeByNameOrID(input string, namedRanges []*sheets.NamedRange)
 		return nil, false, nil
 	}
 
-	options := make([]selectorMatch, 0, len(namedRanges))
+	options := make([]selectorutil.Match, 0, len(namedRanges))
 	for _, nr := range namedRanges {
 		if nr == nil {
 			continue
 		}
-		options = append(options, selectorMatch{
+		options = append(options, selectorutil.Match{
 			ID:   strings.TrimSpace(nr.NamedRangeId),
 			Name: strings.TrimSpace(nr.Name),
 		})
 	}
 
-	match, found, err := findByIDOrCaseFoldName(in, "named range", options)
-	if err != nil {
-		return nil, false, err
-	}
+	match, found, ambiguous := selectorutil.FindByIDOrCaseFoldName(in, options)
 	if !found {
+		if len(ambiguous) > 0 {
+			parts := make([]string, 0, len(ambiguous))
+			for _, match := range ambiguous {
+				label := match.Name
+				if label == "" {
+					label = "(unnamed)"
+				}
+				parts = append(parts, fmt.Sprintf("%s (%s)", label, match.ID))
+			}
+			return nil, false, usagef("ambiguous named range %q; matches: %s", in, strings.Join(parts, ", "))
+		}
 		return nil, false, nil
 	}
 	for _, nr := range namedRanges {
