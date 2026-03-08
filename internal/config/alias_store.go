@@ -81,5 +81,6 @@ func listAliasValues(field aliasMapField) (map[string]string, error) {
 	for k, v := range aliases {
 		out[k] = v
 	}
+
 	return out, nil
 }

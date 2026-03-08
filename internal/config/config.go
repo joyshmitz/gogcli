@@ -36,6 +36,7 @@ func configLockPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("ensure config dir: %w", err)
 	}
+
 	return filepath.Join(dir, "config.lock"), nil
 }
 
@@ -52,6 +53,7 @@ func acquireConfigLock() (func(), error) {
 		if openErr == nil {
 			_, _ = fmt.Fprintf(f, "%d\n", os.Getpid())
 			_ = f.Close()
+
 			return func() { _ = os.Remove(path) }, nil
 		}
 
@@ -109,6 +111,7 @@ func UpdateConfig(update func(*File) error) error {
 	if err != nil {
 		return err
 	}
+
 	if err := update(&cfg); err != nil {
 		return err
 	}
