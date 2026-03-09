@@ -99,3 +99,45 @@ func TestSheetsResizeCmds(t *testing.T) {
 		}
 	})
 }
+
+func TestParseColumnsSpan(t *testing.T) {
+	t.Run("sheet range", func(t *testing.T) {
+		span, err := parseColumnsSpan("Sheet 1!$C:$A", "columns")
+		if err != nil {
+			t.Fatalf("parseColumnsSpan: %v", err)
+		}
+		if span.SheetName != "Sheet 1" {
+			t.Fatalf("SheetName=%q, want %q", span.SheetName, "Sheet 1")
+		}
+		if span.StartIndex != 0 || span.EndIndex != 3 {
+			t.Fatalf("range=%d:%d, want 0:3", span.StartIndex, span.EndIndex)
+		}
+	})
+
+	t.Run("invalid range", func(t *testing.T) {
+		if _, err := parseColumnsSpan("Sheet1!1:3", "columns"); err == nil {
+			t.Fatal("expected error for invalid column range")
+		}
+	})
+}
+
+func TestParseRowsSpan(t *testing.T) {
+	t.Run("sheet range", func(t *testing.T) {
+		span, err := parseRowsSpan("Sheet 1!$4:$2", "rows")
+		if err != nil {
+			t.Fatalf("parseRowsSpan: %v", err)
+		}
+		if span.SheetName != "Sheet 1" {
+			t.Fatalf("SheetName=%q, want %q", span.SheetName, "Sheet 1")
+		}
+		if span.StartIndex != 1 || span.EndIndex != 4 {
+			t.Fatalf("range=%d:%d, want 1:4", span.StartIndex, span.EndIndex)
+		}
+	})
+
+	t.Run("invalid row", func(t *testing.T) {
+		if _, err := parseRowsSpan("Sheet1!0:2", "rows"); err == nil {
+			t.Fatal("expected error for invalid row range")
+		}
+	})
+}
