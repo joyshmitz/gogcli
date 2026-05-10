@@ -183,12 +183,17 @@ func (c *AuthServiceAccountStatusCmd) Run(ctx context.Context) error {
 					"exists":  false,
 					"stored":  false,
 					"message": "no service account configured",
+					"hint":    fmt.Sprintf("configure with: gog auth service-account set %s --key <service-account.json>", email),
 				})
 			}
-			u.Out().Printf("email\t%s", email)
-			u.Out().Printf("path\t%s", path)
-			u.Out().Printf("exists\tfalse")
-			return nil
+			return writeResult(ctx, u,
+				kv("email", email),
+				kv("path", path),
+				kv("exists", false),
+				kv("stored", false),
+				kv("message", "no service account configured"),
+				kv("hint", fmt.Sprintf("gog auth service-account set %s --key <service-account.json>", email)),
+			)
 		}
 		return fmt.Errorf("read service account: %w", err)
 	}
@@ -208,14 +213,17 @@ func (c *AuthServiceAccountStatusCmd) Run(ctx context.Context) error {
 			"client_id":    info.ClientID,
 		})
 	}
-	u.Out().Printf("email\t%s", email)
-	u.Out().Printf("path\t%s", path)
-	u.Out().Printf("exists\ttrue")
+	kvs := []resultKV{
+		kv("email", email),
+		kv("path", path),
+		kv("exists", true),
+		kv("stored", true),
+	}
 	if info.ClientEmail != "" {
-		u.Out().Printf("client_email\t%s", info.ClientEmail)
+		kvs = append(kvs, kv("client_email", info.ClientEmail))
 	}
 	if info.ClientID != "" {
-		u.Out().Printf("client_id\t%s", info.ClientID)
+		kvs = append(kvs, kv("client_id", info.ClientID))
 	}
-	return nil
+	return writeResult(ctx, u, kvs...)
 }

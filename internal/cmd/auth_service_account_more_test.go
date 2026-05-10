@@ -57,6 +57,68 @@ func TestAuthServiceAccountSet_AndList_Text(t *testing.T) {
 	}
 }
 
+func TestAuthServiceAccountStatus_MissingTextHasHint(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
+
+	out := captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			if err := Execute([]string{"auth", "service-account", "status", "user@example.com"}); err != nil {
+				t.Fatalf("Execute: %v", err)
+			}
+		})
+	})
+
+	for _, want := range []string{
+		"email\tuser@example.com",
+		"exists\tfalse",
+		"stored\tfalse",
+		"message\tno service account configured",
+		"hint\tgog auth service-account set user@example.com --key <service-account.json>",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in output: %q", want, out)
+		}
+	}
+}
+
+func TestAuthServiceAccountStatus_ConfiguredTextShowsStored(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
+
+	path, err := config.ServiceAccountPath("user@example.com")
+	if err != nil {
+		t.Fatalf("ServiceAccountPath: %v", err)
+	}
+	if _, err := config.EnsureDir(); err != nil {
+		t.Fatalf("EnsureDir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(`{"type":"service_account","client_email":"svc@example.com","client_id":"123"}`), 0o600); err != nil {
+		t.Fatalf("write key: %v", err)
+	}
+
+	out := captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			if err := Execute([]string{"auth", "service-account", "status", "user@example.com"}); err != nil {
+				t.Fatalf("Execute: %v", err)
+			}
+		})
+	})
+
+	for _, want := range []string{
+		"exists\ttrue",
+		"stored\ttrue",
+		"client_email\tsvc@example.com",
+		"client_id\t123",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in output: %q", want, out)
+		}
+	}
+}
+
 func TestAuthStatus_ShowsServiceAccountPreferred(t *testing.T) {
 	origOpen := openSecretsStore
 	t.Cleanup(func() { openSecretsStore = origOpen })
