@@ -64,3 +64,26 @@ Shows stored credential files plus any configured domain mappings.
 
 - Legacy `token:<email>` entries are copied to `token:default:<email>` the first time they are read.
 - Legacy `default_account` is still respected for the default client.
+
+## Workspace service accounts
+
+Workspace Admin, group, and Keep automation commonly run through a
+service-account key with domain-wide delegation. Store the key for the
+Workspace admin identity you want to impersonate:
+
+```
+gog auth service-account set admin@example.com --key ~/Downloads/service-account.json
+gog auth service-account status admin@example.com
+```
+
+Then run Admin SDK commands with that account:
+
+```
+gog --account admin@example.com admin users create ada@example.com \
+  --first-name Ada \
+  --last-name Lovelace \
+  --change-password
+```
+
+See [Workspace Admin](workspace-admin.md) for user creation, cleanup, and group
+examples.

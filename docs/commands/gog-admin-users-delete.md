@@ -1,26 +1,18 @@
-# `gog admin users`
+# `gog admin users delete`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Manage Workspace users
+Delete a user account
 
 ## Usage
 
 ```bash
-gog admin users <command>
+gog admin users delete (rm,del,remove) <userEmail>
 ```
 
 ## Parent
 
-- [gog admin](gog-admin.md)
-
-## Subcommands
-
-- [gog admin users create](gog-admin-users-create.md) - Create a new user
-- [gog admin users delete](gog-admin-users-delete.md) - Delete a user account
-- [gog admin users get](gog-admin-users-get.md) - Get user details
-- [gog admin users list](gog-admin-users-list.md) - List users in a domain
-- [gog admin users suspend](gog-admin-users-suspend.md) - Suspend a user account
+- [gog admin users](gog-admin-users.md)
 
 ## Flags
 
@@ -46,5 +38,5 @@ gog admin users <command>
 
 ## See Also
 
-- [gog admin](gog-admin.md)
+- [gog admin users](gog-admin-users.md)
 - [Command index](README.md)

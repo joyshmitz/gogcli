@@ -12,6 +12,7 @@ const requiredFeatureDocs = [
   "install.md",
   "quickstart.md",
   "auth-clients.md",
+  "workspace-admin.md",
   "safety-profiles.md",
   "raw-api.md",
   "raw-audit.md",

@@ -33,7 +33,15 @@ root = schema.get("command") or {}
 
 
 def first_line(value):
+    value = normalize_dynamic_text(value)
     return (value or "").strip().splitlines()[0] if (value or "").strip() else ""
+
+
+def normalize_dynamic_text(value):
+    if not value:
+        return ""
+    value = re.sub(r"(?m)^  file: .*[\\/]+gogcli[\\/]+config\.json$", "  file: <config-dir>/gogcli/config.json", value)
+    return value
 
 
 def canonical_tokens(path):
@@ -125,8 +133,9 @@ def command_page(command):
         "> Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.",
         "",
     ]
-    if command.get("help"):
-        lines.extend([command.get("help").strip(), ""])
+    help_text = normalize_dynamic_text(command.get("help"))
+    if help_text:
+        lines.extend([help_text.strip(), ""])
     lines.extend(["## Usage", "", "```bash", f"{command_label(command)}", "```", ""])
     if parent:
         lines.extend(["## Parent", "", f"- {link(parent)}", ""])

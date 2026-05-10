@@ -4,6 +4,7 @@
 
 ### Added
 
+- Admin: expand `admin users create` with GAM-style aliases, generated passwords, suspended/archived creation, recovery contact fields, and password hash metadata; add `admin users delete` for cleanup.
 - Sites: add Drive-backed `sites` commands to list, search, inspect, and open New Google Sites. (#574) — thanks @thewilloftheshadow.
 - Analytics/Search Console: add GA4 `analytics accounts|report` plus Search Console site, search analytics, and sitemap commands. (#402) — thanks @haresh-seenivasagan.
 - Gmail: add `gmail send --body-html-file` for sending HTML email bodies from files without shell command substitution. (#575) — thanks @toruvieI.

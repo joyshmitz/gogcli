@@ -351,6 +351,21 @@ Workspace/admin services:
 - Cloud Identity Groups
 - Keep with domain-wide delegation
 
+Admin Directory includes Workspace user creation from the CLI:
+
+```bash
+gog --account admin@example.com admin users create ada@example.com \
+  --first-name Ada \
+  --last-name Lovelace \
+  --password 'TempPass123!' \
+  --change-password \
+  --ou /Engineering
+```
+
+Omit `--password` to generate a temporary password. See
+[docs/workspace-admin.md](docs/workspace-admin.md) for service-account setup,
+user cleanup, recovery fields, and group examples.
+
 Generated service scope table:
 
 <!-- auth-services:start -->
@@ -394,6 +409,7 @@ go run scripts/gen-auth-services-md.go
 - [docs/commands/README.md](docs/commands/README.md): generated command index
 - [docs/safety-profiles.md](docs/safety-profiles.md): command guards and baked safe binaries
 - [docs/auth-clients.md](docs/auth-clients.md): OAuth clients, account mapping, and service accounts
+- [docs/workspace-admin.md](docs/workspace-admin.md): Workspace user and group administration
 - [docs/sheets-tables.md](docs/sheets-tables.md): structured Sheets tables
 - [docs/backup.md](docs/backup.md): encrypted Google account backups
 - [CHANGELOG.md](CHANGELOG.md): release notes

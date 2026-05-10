@@ -112,6 +112,19 @@ gog me
 Human-facing progress, hints, and warnings always go to stderr, so pipes stay
 parseable.
 
+Workspace admins can create users after configuring Admin SDK access and
+domain-wide delegation:
+
+```bash
+gog --account admin@example.com admin users create ada@example.com \
+  --first-name Ada \
+  --last-name Lovelace \
+  --change-password
+```
+
+See [Workspace Admin](workspace-admin.md) for service-account setup, generated
+passwords, recovery fields, and cleanup commands.
+
 ## 7. Shell completion (optional)
 
 ```bash
@@ -124,6 +137,8 @@ gog completion fish    >  ~/.config/fish/completions/gog.fish
 
 - [Auth Clients](auth-clients.md) — named clients, service accounts, ADC,
   Workspace domain-wide delegation, OIDC subject migration.
+- [Workspace Admin](workspace-admin.md) — create, inspect, suspend, delete,
+  and list Workspace users and groups.
 - [Safety Profiles](safety-profiles.md) — runtime allow/deny lists and baked
   agent-safe binaries.
 - [Gmail Workflows](gmail-workflows.md) and [Drive Audits](drive-audits.md) for

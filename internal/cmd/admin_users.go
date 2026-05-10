@@ -17,6 +17,7 @@ type AdminUsersCmd struct {
 	List    AdminUsersListCmd    `cmd:"" name:"list" aliases:"ls" help:"List users in a domain"`
 	Get     AdminUsersGetCmd     `cmd:"" name:"get" aliases:"info,show" help:"Get user details"`
 	Create  AdminUsersCreateCmd  `cmd:"" name:"create" aliases:"add,new" help:"Create a new user"`
+	Delete  AdminUsersDeleteCmd  `cmd:"" name:"delete" aliases:"rm,del,remove" help:"Delete a user account"`
 	Suspend AdminUsersSuspendCmd `cmd:"" name:"suspend" help:"Suspend a user account"`
 }
 
@@ -219,13 +220,18 @@ func (c *AdminUsersGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 }
 
 type AdminUsersCreateCmd struct {
-	Email      string `arg:"" name:"email" help:"User email (e.g., user@example.com)"`
-	GivenName  string `name:"given" help:"Given (first) name"`
-	FamilyName string `name:"family" help:"Family (last) name"`
-	Password   string `name:"password" help:"Initial password"`
-	ChangePwd  bool   `name:"change-password" help:"Require password change on first login"`
-	OrgUnit    string `name:"org-unit" help:"Organization unit path"`
-	Admin      bool   `name:"admin" help:"Not supported; assign admin roles separately after user creation"`
+	Email         string `arg:"" name:"email" help:"User email (e.g., user@example.com)"`
+	GivenName     string `name:"given" aliases:"first-name,given-name,fn" help:"Given (first) name"`
+	FamilyName    string `name:"family" aliases:"last-name,family-name,ln" help:"Family (last) name"`
+	Password      string `name:"password" aliases:"pass" help:"Initial password (generated if omitted)"`
+	ChangePwd     bool   `name:"change-password" help:"Require password change on first login"`
+	OrgUnit       string `name:"org-unit" aliases:"ou" help:"Organization unit path"`
+	Suspended     bool   `name:"suspended" help:"Create user in suspended state"`
+	Archived      bool   `name:"archived" help:"Create user in archived state"`
+	RecoveryEmail string `name:"recovery-email" help:"Recovery email address"`
+	RecoveryPhone string `name:"recovery-phone" help:"Recovery phone number in E.164 format"`
+	HashFunction  string `name:"hash-function" help:"Password hash function when --password is pre-hashed (MD5, SHA-1, crypt)"`
+	Admin         bool   `name:"admin" help:"Not supported; assign admin roles separately after user creation"`
 }
 
 func (c *AdminUsersCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
@@ -247,11 +253,23 @@ func (c *AdminUsersCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
 	if familyName == "" {
 		return usage("--family required")
 	}
-	if password == "" {
-		return usage("--password required")
-	}
 	if c.Admin {
 		return usage("--admin is not supported; assign admin roles separately after user creation")
+	}
+	hashFunction, err := normalizeAdminUserHashFunction(c.HashFunction)
+	if err != nil {
+		return err
+	}
+	if hashFunction != "" && password == "" {
+		return usage("--password required when --hash-function is set")
+	}
+	generatedPassword := false
+	if password == "" {
+		password, err = generateAdminUserPassword(16)
+		if err != nil {
+			return fmt.Errorf("generate password: %w", err)
+		}
+		generatedPassword = true
 	}
 
 	user := &admin.User{
@@ -261,10 +279,21 @@ func (c *AdminUsersCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
 			FamilyName: familyName,
 		},
 		Password:                  password,
-		ChangePasswordAtNextLogin: c.ChangePwd,
+		ChangePasswordAtNextLogin: c.ChangePwd || generatedPassword,
+		Suspended:                 c.Suspended,
+		Archived:                  c.Archived,
 	}
 	if c.OrgUnit != "" {
-		user.OrgUnitPath = c.OrgUnit
+		user.OrgUnitPath = strings.TrimSpace(c.OrgUnit)
+	}
+	if c.RecoveryEmail != "" {
+		user.RecoveryEmail = strings.TrimSpace(c.RecoveryEmail)
+	}
+	if c.RecoveryPhone != "" {
+		user.RecoveryPhone = strings.TrimSpace(c.RecoveryPhone)
+	}
+	if hashFunction != "" {
+		user.HashFunction = hashFunction
 	}
 
 	if dryRunErr := dryRunExit(ctx, flags, "create user", user); dryRunErr != nil {
@@ -282,14 +311,61 @@ func (c *AdminUsersCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		result := map[string]any{
 			"email": created.PrimaryEmail,
 			"id":    created.Id,
+		}
+		if generatedPassword {
+			result["generatedPassword"] = password
+		}
+		return outfmt.WriteJSON(ctx, os.Stdout, result)
+	}
+
+	u := ui.FromContext(ctx)
+	u.Out().Printf("Created user: %s (ID: %s)\n", created.PrimaryEmail, created.Id)
+	if generatedPassword {
+		u.Out().Printf("Generated password: %s\n", password)
+	}
+	return nil
+}
+
+type AdminUsersDeleteCmd struct {
+	UserEmail string `arg:"" name:"userEmail" help:"User email to delete"`
+}
+
+func (c *AdminUsersDeleteCmd) Run(ctx context.Context, flags *RootFlags) error {
+	account, err := requireAdminAccount(flags)
+	if err != nil {
+		return err
+	}
+
+	userEmail := strings.TrimSpace(c.UserEmail)
+	if userEmail == "" {
+		return usage("user email required")
+	}
+
+	if confirmErr := confirmDestructive(ctx, flags, fmt.Sprintf("delete user %s", userEmail)); confirmErr != nil {
+		return confirmErr
+	}
+
+	svc, err := newAdminDirectoryService(ctx, account)
+	if err != nil {
+		return wrapAdminDirectoryError(err, account)
+	}
+
+	if err := svc.Users.Delete(userEmail).Context(ctx).Do(); err != nil {
+		return wrapAdminDirectoryError(err, account)
+	}
+
+	if outfmt.IsJSON(ctx) {
+		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+			"email":   userEmail,
+			"deleted": true,
 		})
 	}
 
 	u := ui.FromContext(ctx)
-	u.Out().Printf("Created user: %s (ID: %s)", created.PrimaryEmail, created.Id)
+	u.Out().Printf("Deleted user: %s\n", userEmail)
 	return nil
 }
 

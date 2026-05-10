@@ -5,7 +5,7 @@
 Google CLI for Gmail/Calendar/Chat/Classroom/Drive/Contacts/Tasks/Sheets/Docs/Slides/People/Forms/Meet/App Script/Analytics/Search Console/Ads/Groups/Admin/Keep/YouTube
 
 Config:
-  file: /Users/shadow/Library/Application Support/gogcli/config.json
+  file: <config-dir>/gogcli/config.json
   keyring backend: file (source: config)
 
 ## Usage

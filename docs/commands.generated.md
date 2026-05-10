@@ -12,6 +12,7 @@ Generated from `gog schema --json`.
         - [`gog admin groups members remove (rm,del,delete) <groupEmail> <memberEmail>`](commands/gog-admin-groups-members-remove.md) - Remove a member from a group
     - [`gog admin users <command>`](commands/gog-admin-users.md) - Manage Workspace users
       - [`gog admin users create (add,new) <email> [flags]`](commands/gog-admin-users-create.md) - Create a new user
+      - [`gog admin users delete (rm,del,remove) <userEmail>`](commands/gog-admin-users-delete.md) - Delete a user account
       - [`gog admin users get (info,show) <userEmail>`](commands/gog-admin-users-get.md) - Get user details
       - [`gog admin users list (ls) [flags]`](commands/gog-admin-users-list.md) - List users in a domain
       - [`gog admin users suspend <userEmail>`](commands/gog-admin-users-suspend.md) - Suspend a user account

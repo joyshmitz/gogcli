@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/steipete/gogcli/internal/errfmt"
@@ -14,6 +17,79 @@ const (
 	adminRoleOwner   = "OWNER"
 	adminRoleManager = "MANAGER"
 )
+
+func generateAdminUserPassword(length int) (string, error) {
+	if length < 8 {
+		length = 8
+	}
+	const lower = "abcdefghijklmnopqrstuvwxyz"
+	const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	const digits = "0123456789"
+	const special = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+	const all = lower + upper + digits + special
+
+	sets := []string{lower, upper, digits, special}
+	b := make([]byte, length)
+	for i, set := range sets {
+		ch, err := adminUserRandChar(set)
+		if err != nil {
+			return "", err
+		}
+		b[i] = ch
+	}
+	for i := len(sets); i < length; i++ {
+		ch, err := adminUserRandChar(all)
+		if err != nil {
+			return "", err
+		}
+		b[i] = ch
+	}
+	for i := len(b) - 1; i > 0; i-- {
+		j, err := adminUserRandInt(i + 1)
+		if err != nil {
+			return "", err
+		}
+		b[i], b[j] = b[j], b[i]
+	}
+	return string(b), nil
+}
+
+func adminUserRandChar(set string) (byte, error) {
+	if len(set) == 0 {
+		return 0, fmt.Errorf("empty character set")
+	}
+	idx, err := adminUserRandInt(len(set))
+	if err != nil {
+		return 0, err
+	}
+	return set[idx], nil
+}
+
+func adminUserRandInt(maxVal int) (int, error) {
+	if maxVal <= 0 {
+		return 0, fmt.Errorf("invalid max %d", maxVal)
+	}
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(maxVal)))
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64()), nil
+}
+
+func normalizeAdminUserHashFunction(value string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "":
+		return "", nil
+	case "md5":
+		return "MD5", nil
+	case "sha-1", "sha1":
+		return "SHA-1", nil
+	case "crypt":
+		return "crypt", nil
+	default:
+		return "", usage("invalid --hash-function (expected MD5, SHA-1, crypt)")
+	}
+}
 
 func requireAdminAccount(flags *RootFlags) (string, error) {
 	account, err := requireAccount(flags)
