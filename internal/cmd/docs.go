@@ -24,6 +24,7 @@ type DocsCmd struct {
 	Copy        DocsCopyCmd        `cmd:"" name:"copy" aliases:"cp,duplicate" help:"Copy a Google Doc"`
 	Cat         DocsCatCmd         `cmd:"" name:"cat" aliases:"text,read" help:"Print a Google Doc as plain text"`
 	Comments    DocsCommentsCmd    `cmd:"" name:"comments" help:"Manage comments on files"`
+	Tabs        DocsTabsCmd        `cmd:"" name:"tabs" help:"Manage Google Doc tabs"`
 	AddTab      DocsAddTabCmd      `cmd:"" name:"add-tab" help:"Add a tab to a Google Doc"`
 	RenameTab   DocsRenameTabCmd   `cmd:"" name:"rename-tab" help:"Rename a tab in a Google Doc"`
 	DeleteTab   DocsDeleteTabCmd   `cmd:"" name:"delete-tab" help:"Delete a tab from a Google Doc"`
@@ -39,6 +40,13 @@ type DocsCmd struct {
 	Clear       DocsClearCmd       `cmd:"" name:"clear" help:"Clear all content from a Google Doc"`
 	Structure   DocsStructureCmd   `cmd:"" name:"structure" aliases:"struct" help:"Show document structure with numbered paragraphs"`
 	Raw         DocsRawCmd         `cmd:"" name:"raw" help:"Dump raw Google Docs API response as JSON (Documents.Get; lossless; for scripting and LLM consumption)"`
+}
+
+type DocsTabsCmd struct {
+	List   DocsListTabsCmd  `cmd:"" name:"list" aliases:"ls" help:"List all tabs in a Google Doc"`
+	Add    DocsAddTabCmd    `cmd:"" name:"add" aliases:"create,new" help:"Add a tab to a Google Doc"`
+	Rename DocsRenameTabCmd `cmd:"" name:"rename" aliases:"move" help:"Rename a tab in a Google Doc"`
+	Delete DocsDeleteTabCmd `cmd:"" name:"delete" aliases:"rm,remove,del" help:"Delete a tab from a Google Doc"`
 }
 
 // DocsRawCmd dumps the full Documents.Get response as JSON, with no Fields

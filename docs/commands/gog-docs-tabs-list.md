@@ -1,23 +1,18 @@
-# `gog drive audit`
+# `gog docs tabs list`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+List all tabs in a Google Doc
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog docs (doc) tabs list (ls) <docId>
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
-
-## Subcommands
-
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog docs tabs](gog-docs-tabs.md)
 
 ## Flags
 
@@ -44,5 +39,5 @@ gog drive (drv) audit <command>
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog docs tabs](gog-docs-tabs.md)
 - [Command index](README.md)

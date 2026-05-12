@@ -196,7 +196,7 @@ func determineLayout(slide Slide) SlideLayout {
 
 	for _, elem := range slide.Elements {
 		switch elem.Type {
-		case "title":
+		case slideElementTitle:
 			hasTitle = true
 		case "bullets":
 			hasBullets = true

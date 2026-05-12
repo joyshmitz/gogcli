@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/drivelabels/v2"
 )
 
@@ -61,6 +63,66 @@ func TestNormalizeDriveLabelName(t *testing.T) {
 	}
 	if got := normalizeDriveLabelName("labels/abc"); got != "labels/abc" {
 		t.Fatalf("unexpected: %q", got)
+	}
+}
+
+func TestDriveLabelsFileList_JSON(t *testing.T) {
+	svc, closeSvc := newDriveTestService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/files/file1/listLabels" {
+			http.NotFound(w, r)
+			return
+		}
+		requireQuery(t, r, "maxResults", "10")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"labels": []map[string]any{{"id": "label1", "revisionId": "2"}},
+		})
+	}))
+	defer closeSvc()
+	stubGoogleTestService(t, &newDriveService, svc)
+
+	out := captureStdout(t, func() {
+		if err := (&DriveLabelsFileListCmd{FileID: "file1", Max: 10}).Run(newCalendarJSONContext(t), &RootFlags{Account: "a@example.com"}); err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+	})
+	if !strings.Contains(out, `"labelCount": 1`) || !strings.Contains(out, "label1") {
+		t.Fatalf("unexpected output: %s", out)
+	}
+}
+
+func TestDriveLabelsFileApply_BuildsModifyLabelsRequest(t *testing.T) {
+	svc, closeSvc := newDriveTestService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/files/file1/modifyLabels" {
+			http.NotFound(w, r)
+			return
+		}
+		var req drive.ModifyLabelsRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+			t.Fatalf("decode body: %v", err)
+		}
+		if len(req.LabelModifications) != 1 || req.LabelModifications[0].LabelId != "label1" {
+			t.Fatalf("unexpected request: %#v", req)
+		}
+		fields := req.LabelModifications[0].FieldModifications
+		if len(fields) != 2 || fields[0].FieldId != "title" || fields[0].SetTextValues[0] != "Project" || !fields[1].UnsetValues {
+			t.Fatalf("unexpected fields: %#v", fields)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"modifiedLabels": []map[string]any{{"id": "label1"}},
+		})
+	}))
+	defer closeSvc()
+	stubGoogleTestService(t, &newDriveService, svc)
+
+	if err := (&DriveLabelsFileApplyCmd{
+		FileID:  "file1",
+		LabelID: "labels/label1",
+		Text:    []string{"title=Project"},
+		Unset:   []string{"old"},
+	}).Run(newCmdOutputContext(t, io.Discard, io.Discard), &RootFlags{Account: "a@example.com", Force: true}); err != nil {
+		t.Fatalf("Run: %v", err)
 	}
 }
 

@@ -5,10 +5,11 @@
 ### Added
 
 - Drive: add `drive share --notify` for invite targets that require a Drive notification email.
-- Calendar: add `calendar appointments` with a clear diagnostic that Google Calendar appointment schedules are not currently exposed by the Calendar API. (#329)
-- Drive: add read-only `drive audit sharing` to find public and external permissions across a file or folder tree. (#336)
-- Drive: add `drive labels list|get` for read-only Drive Labels API v2 discovery. (#339)
-- Maps: add `maps places search|details` backed by the existing Places API-key configuration. (#571)
+- Calendar: keep `calendar appointments` as an explicit diagnostic because the Calendar API still rejects `eventTypes=appointmentSchedule`. (#329)
+- CLI: add nested `docs tabs ...` and `forms questions ...` aliases for consistent sub-item command patterns while preserving existing flat commands. (#433)
+- Drive: add `drive audit sharing|user` plus guarded `drive bulk remove-public|update-role` permission operations with dry-run and confirmation support. (#336)
+- Drive: add `drive labels file list|apply|remove` alongside Drive Labels API v2 discovery. (#339)
+- Maps: add directions, distance matrix, geocode, and reverse-geocode commands alongside Places search/details. (#571)
 - Photos: add read-only `photos list|search|get|download` for app-created Google Photos media. (#381)
 
 ### Fixed

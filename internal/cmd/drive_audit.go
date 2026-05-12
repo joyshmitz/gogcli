@@ -15,6 +15,7 @@ import (
 
 type DriveAuditCmd struct {
 	Sharing DriveAuditSharingCmd `cmd:"" name:"sharing" aliases:"permissions,perms,public,external" help:"Find public or external Drive permissions"`
+	User    DriveAuditUserCmd    `cmd:"" name:"user" help:"Find Drive permissions granted to a user"`
 }
 
 type DriveAuditSharingCmd struct {
@@ -27,6 +28,16 @@ type DriveAuditSharingCmd struct {
 	ExternalOnly   bool     `name:"external-only" help:"Only report external user/group/domain permissions"`
 	AllDrives      bool     `name:"all-drives" help:"Include shared drives (default: true; use --no-all-drives for My Drive only)" default:"true" negatable:"_"`
 	FailFound      bool     `name:"fail-found" help:"Exit with code 3 when findings are present"`
+}
+
+type DriveAuditUserCmd struct {
+	User      string `arg:"" name:"user" help:"User email to audit"`
+	FileID    string `name:"file" aliases:"file-id" help:"Audit one file ID instead of a folder tree"`
+	Parent    string `name:"parent" help:"Folder ID to scan (default: root)"`
+	Depth     int    `name:"depth" help:"Max folder depth (0 = unlimited)" default:"2"`
+	Max       int    `name:"max" help:"Max files/folders to scan (0 = unlimited)" default:"500"`
+	AllDrives bool   `name:"all-drives" help:"Include shared drives (default: true; use --no-all-drives for My Drive only)" default:"true" negatable:"_"`
+	FailFound bool   `name:"fail-found" help:"Exit with code 3 when findings are present"`
 }
 
 type driveSharingAuditFinding struct {
@@ -48,6 +59,63 @@ type driveSharingAuditFinding struct {
 	Reasons            []string          `json:"reasons"`
 	Inherited          bool              `json:"inherited,omitempty"`
 	PermissionDetails  map[string]string `json:"permissionDetails,omitempty"`
+}
+
+func (c *DriveAuditUserCmd) Run(ctx context.Context, flags *RootFlags) error {
+	u := ui.FromContext(ctx)
+	targetUser := strings.ToLower(strings.TrimSpace(c.User))
+	if targetUser == "" {
+		return usage("empty user")
+	}
+	_, svc, err := requireDriveService(ctx, flags)
+	if err != nil {
+		return err
+	}
+	items, truncated, err := driveAuditItems(ctx, svc, c.FileID, c.Parent, c.Depth, c.Max, c.AllDrives)
+	if err != nil {
+		return err
+	}
+
+	findings := make([]driveSharingAuditFinding, 0)
+	for _, item := range items {
+		perms, err := listDrivePermissionsForAudit(ctx, svc, item.ID)
+		if err != nil {
+			return fmt.Errorf("list permissions for %s: %w", item.ID, err)
+		}
+		for _, perm := range perms {
+			if perm == nil || strings.ToLower(strings.TrimSpace(perm.EmailAddress)) != targetUser {
+				continue
+			}
+			findings = append(findings, drivePermissionFinding(item, perm, []string{"user"}))
+		}
+	}
+	sortDriveSharingFindings(findings)
+
+	if outfmt.IsJSON(ctx) {
+		err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+			"findings":         findings,
+			"findingCount":     len(findings),
+			"scannedFileCount": len(items),
+			"user":             targetUser,
+			"truncated":        truncated,
+		})
+		if err != nil {
+			return err
+		}
+		return failEmptyExit(c.FailFound && len(findings) > 0)
+	}
+	if len(findings) == 0 {
+		u.Err().Printf("No permissions found for %s", targetUser)
+		if truncated {
+			u.Err().Println("Results truncated; increase --max to scan more.")
+		}
+		return nil
+	}
+	writeDriveSharingFindingsTable(ctx, findings)
+	if truncated {
+		u.Err().Println("Results truncated; increase --max to scan more.")
+	}
+	return failEmptyExit(c.FailFound)
 }
 
 func (c *DriveAuditSharingCmd) Run(ctx context.Context, flags *RootFlags) error {
@@ -87,12 +155,7 @@ func (c *DriveAuditSharingCmd) Run(ctx context.Context, flags *RootFlags) error 
 		}
 	}
 
-	sort.Slice(findings, func(i, j int) bool {
-		if findings[i].Path == findings[j].Path {
-			return findings[i].PermissionID < findings[j].PermissionID
-		}
-		return findings[i].Path < findings[j].Path
-	})
+	sortDriveSharingFindings(findings)
 
 	if outfmt.IsJSON(ctx) {
 		err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
@@ -116,33 +179,7 @@ func (c *DriveAuditSharingCmd) Run(ctx context.Context, flags *RootFlags) error 
 		return nil
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "PATH\tREASONS\tTYPE\tROLE\tTARGET\tPERMISSION_ID")
-	for _, f := range findings {
-		target := f.Email
-		if target == "" {
-			target = f.Domain
-		}
-		if target == "" {
-			target = f.DisplayName
-		}
-		if target == "" {
-			target = "-"
-		}
-		path := f.Path
-		if path == "" {
-			path = f.FileName
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			sanitizeTab(path),
-			strings.Join(f.Reasons, ","),
-			f.PermissionType,
-			f.Role,
-			target,
-			f.PermissionID,
-		)
-	}
+	writeDriveSharingFindingsTable(ctx, findings)
 	if truncated {
 		u.Err().Println("Results truncated; increase --max to scan more.")
 	}
@@ -150,7 +187,11 @@ func (c *DriveAuditSharingCmd) Run(ctx context.Context, flags *RootFlags) error 
 }
 
 func (c *DriveAuditSharingCmd) auditItems(ctx context.Context, svc *drive.Service) ([]driveTreeItem, bool, error) {
-	fileID := strings.TrimSpace(c.FileID)
+	return driveAuditItems(ctx, svc, c.FileID, c.Parent, c.Depth, c.Max, c.AllDrives)
+}
+
+func driveAuditItems(ctx context.Context, svc *drive.Service, fileIDRaw, parentRaw string, depthRaw, maxRaw int, allDrives bool) ([]driveTreeItem, bool, error) {
+	fileID := strings.TrimSpace(fileIDRaw)
 	if fileID != "" {
 		f, err := svc.Files.Get(fileID).
 			SupportsAllDrives(true).
@@ -169,15 +210,15 @@ func (c *DriveAuditSharingCmd) auditItems(ctx context.Context, svc *drive.Servic
 			Owners:      driveOwners(f),
 		}}, false, nil
 	}
-	rootID := strings.TrimSpace(c.Parent)
+	rootID := strings.TrimSpace(parentRaw)
 	if rootID == "" {
 		rootID = driveRootID
 	}
-	limit := c.Max
+	limit := maxRaw
 	if limit < 0 {
 		limit = 0
 	}
-	depth := c.Depth
+	depth := depthRaw
 	if depth < 0 {
 		depth = 0
 	}
@@ -188,7 +229,7 @@ func (c *DriveAuditSharingCmd) auditItems(ctx context.Context, svc *drive.Servic
 		Fields:        "id,name,mimeType,owners(emailAddress,displayName),webViewLink",
 		IncludeFiles:  true,
 		IncludeFolder: true,
-		AllDrives:     c.AllDrives,
+		AllDrives:     allDrives,
 	})
 }
 
@@ -231,22 +272,17 @@ func driveSharingFinding(item driveTreeItem, perm *drive.Permission, internalDom
 		return driveSharingAuditFinding{}, false
 	}
 	f := driveSharingAuditFinding{
-		FileID:             item.ID,
-		FileName:           item.Name,
-		Path:               item.Path,
-		MimeType:           item.MimeType,
-		OwnerEmails:        item.Owners,
-		PermissionID:       perm.Id,
-		PermissionType:     perm.Type,
-		Role:               perm.Role,
-		Email:              perm.EmailAddress,
-		Domain:             perm.Domain,
-		DisplayName:        perm.DisplayName,
-		AllowFileDiscovery: perm.AllowFileDiscovery,
-		Deleted:            perm.Deleted,
-		ExpirationTime:     perm.ExpirationTime,
-		Reasons:            reasons,
+		FileID:         item.ID,
+		FileName:       item.Name,
+		Path:           item.Path,
+		MimeType:       item.MimeType,
+		OwnerEmails:    item.Owners,
+		PermissionID:   perm.Id,
+		PermissionType: perm.Type,
+		Role:           perm.Role,
+		Reasons:        reasons,
 	}
+	fillDrivePermissionFinding(&f, perm)
 	for _, detail := range perm.PermissionDetails {
 		if detail == nil {
 			continue
@@ -268,6 +304,70 @@ func driveSharingFinding(item driveTreeItem, perm *drive.Permission, internalDom
 		}
 	}
 	return f, true
+}
+
+func drivePermissionFinding(item driveTreeItem, perm *drive.Permission, reasons []string) driveSharingAuditFinding {
+	f := driveSharingAuditFinding{
+		FileID:         item.ID,
+		FileName:       item.Name,
+		Path:           item.Path,
+		MimeType:       item.MimeType,
+		OwnerEmails:    item.Owners,
+		PermissionID:   perm.Id,
+		PermissionType: perm.Type,
+		Role:           perm.Role,
+		Reasons:        reasons,
+	}
+	fillDrivePermissionFinding(&f, perm)
+	return f
+}
+
+func fillDrivePermissionFinding(f *driveSharingAuditFinding, perm *drive.Permission) {
+	f.Email = perm.EmailAddress
+	f.Domain = perm.Domain
+	f.DisplayName = perm.DisplayName
+	f.AllowFileDiscovery = perm.AllowFileDiscovery
+	f.Deleted = perm.Deleted
+	f.ExpirationTime = perm.ExpirationTime
+}
+
+func sortDriveSharingFindings(findings []driveSharingAuditFinding) {
+	sort.Slice(findings, func(i, j int) bool {
+		if findings[i].Path == findings[j].Path {
+			return findings[i].PermissionID < findings[j].PermissionID
+		}
+		return findings[i].Path < findings[j].Path
+	})
+}
+
+func writeDriveSharingFindingsTable(ctx context.Context, findings []driveSharingAuditFinding) {
+	w, flush := tableWriter(ctx)
+	defer flush()
+	fmt.Fprintln(w, "PATH\tREASONS\tTYPE\tROLE\tTARGET\tPERMISSION_ID")
+	for _, f := range findings {
+		target := f.Email
+		if target == "" {
+			target = f.Domain
+		}
+		if target == "" {
+			target = f.DisplayName
+		}
+		if target == "" {
+			target = "-"
+		}
+		path := f.Path
+		if path == "" {
+			path = f.FileName
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			sanitizeTab(path),
+			strings.Join(f.Reasons, ","),
+			f.PermissionType,
+			f.Role,
+			target,
+			f.PermissionID,
+		)
+	}
 }
 
 func normalizeInternalDomains(input []string, account string) map[string]struct{} {

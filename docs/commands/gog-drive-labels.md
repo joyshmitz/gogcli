@@ -2,7 +2,7 @@
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Read Drive label schemas
+Read and modify Drive labels
 
 ## Usage
 
@@ -16,6 +16,7 @@ gog drive (drv) labels (label) <command>
 
 ## Subcommands
 
+- [gog drive labels file](gog-drive-labels-file.md) - List, apply, or remove labels on Drive files
 - [gog drive labels get](gog-drive-labels-get.md) - Get a Drive label schema
 - [gog drive labels list](gog-drive-labels-list.md) - List Drive label schemas
 

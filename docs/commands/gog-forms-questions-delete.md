@@ -1,23 +1,18 @@
-# `gog drive audit`
+# `gog forms questions delete`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Delete a question by index
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog forms (form) questions delete (rm,remove,del) <formId> <index>
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
-
-## Subcommands
-
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog forms questions](gog-forms-questions.md)
 
 ## Flags
 
@@ -44,5 +39,5 @@ gog drive (drv) audit <command>
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog forms questions](gog-forms-questions.md)
 - [Command index](README.md)

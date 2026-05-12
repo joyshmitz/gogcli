@@ -22,6 +22,7 @@ gog forms (form) <command> [flags]
 - [gog forms get](gog-forms-get.md) - Get a form
 - [gog forms move-question](gog-forms-move-question.md) - Move a question to a new position
 - [gog forms publish](gog-forms-publish.md) - Publish or unpublish a form
+- [gog forms questions](gog-forms-questions.md) - Form questions
 - [gog forms raw](gog-forms-raw.md) - Dump raw Google Forms API response as JSON (Forms.Get; lossless; for scripting and LLM consumption)
 - [gog forms responses](gog-forms-responses.md) - Form responses
 - [gog forms update](gog-forms-update.md) - Update form title, description, or settings

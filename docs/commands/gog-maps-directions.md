@@ -1,23 +1,18 @@
-# `gog drive audit`
+# `gog maps directions`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Get directions between two locations
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog maps (map) directions (route) --origin=STRING --destination=STRING [flags]
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
-
-## Subcommands
-
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog maps](gog-maps.md)
 
 ## Flags
 
@@ -27,6 +22,7 @@ gog drive (drv) audit <command>
 | `-a`<br>`--account`<br>`--acct` | `string` |  | Account email for API commands (gmail/calendar/chat/classroom/drive/drivelabels/docs/slides/contacts/tasks/people/sheets/forms/sites/appscript/analytics/searchconsole/ads/photos) |
 | `--client` | `string` |  | OAuth client name (selects stored credentials + token bucket) |
 | `--color` | `string` | auto | Color output: auto\|always\|never |
+| `--destination` | `string` |  | Destination address, place ID, or lat,lng |
 | `--disable-commands` | `string` |  | Comma-separated list of disabled commands; dot paths allowed |
 | `-n`<br>`--dry-run`<br>`--dryrun`<br>`--noop`<br>`--preview` | `bool` |  | Do not make changes; print intended actions and exit successfully |
 | `--enable-commands` | `string` |  | Comma-separated list of enabled commands; dot paths allowed (restricts CLI) |
@@ -34,8 +30,12 @@ gog drive (drv) audit <command>
 | `--gmail-no-send` | `bool` | false | Block Gmail send operations (agent safety) |
 | `-h`<br>`--help` | `kong.helpFlag` |  | Show context-sensitive help. |
 | `-j`<br>`--json`<br>`--machine` | `bool` | false | Output JSON to stdout (best for scripting) |
+| `--language` | `string` |  | BCP-47 language code |
+| `--mode` | `string` |  | Travel mode: driving\|walking\|bicycling\|transit |
 | `--no-input`<br>`--non-interactive`<br>`--noninteractive` | `bool` |  | Never prompt; fail instead (useful for CI) |
+| `--origin` | `string` |  | Origin address, place ID, or lat,lng |
 | `-p`<br>`--plain`<br>`--tsv` | `bool` | false | Output stable, parseable text to stdout (TSV; no colors) |
+| `--region` | `string` |  | Region bias |
 | `--results-only` | `bool` |  | In JSON mode, emit only the primary result (drops envelope fields like nextPageToken) |
 | `--select`<br>`--pick`<br>`--project` | `string` |  | In JSON mode, select comma-separated fields (best-effort; supports dot paths). Desire path: use --fields for most commands. |
 | `-v`<br>`--verbose` | `bool` |  | Enable verbose logging |
@@ -44,5 +44,5 @@ gog drive (drv) audit <command>
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog maps](gog-maps.md)
 - [Command index](README.md)

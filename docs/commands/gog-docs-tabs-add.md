@@ -1,23 +1,18 @@
-# `gog drive audit`
+# `gog docs tabs add`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Add a tab to a Google Doc
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog docs (doc) tabs add (create,new) <docId> [flags]
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
-
-## Subcommands
-
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog docs tabs](gog-docs-tabs.md)
 
 ## Flags
 
@@ -33,16 +28,20 @@ gog drive (drv) audit <command>
 | `-y`<br>`--force`<br>`--assume-yes`<br>`--yes` | `bool` |  | Skip confirmations for destructive commands |
 | `--gmail-no-send` | `bool` | false | Block Gmail send operations (agent safety) |
 | `-h`<br>`--help` | `kong.helpFlag` |  | Show context-sensitive help. |
+| `--icon-emoji` | `string` |  | Optional tab emoji icon |
+| `--index` | `*int64` |  | Zero-based tab index within the parent |
 | `-j`<br>`--json`<br>`--machine` | `bool` | false | Output JSON to stdout (best for scripting) |
 | `--no-input`<br>`--non-interactive`<br>`--noninteractive` | `bool` |  | Never prompt; fail instead (useful for CI) |
+| `--parent-tab` | `string` |  | Optional parent tab title or ID |
 | `-p`<br>`--plain`<br>`--tsv` | `bool` | false | Output stable, parseable text to stdout (TSV; no colors) |
 | `--results-only` | `bool` |  | In JSON mode, emit only the primary result (drops envelope fields like nextPageToken) |
 | `--select`<br>`--pick`<br>`--project` | `string` |  | In JSON mode, select comma-separated fields (best-effort; supports dot paths). Desire path: use --fields for most commands. |
+| `--title` | `string` |  | User-visible tab title |
 | `-v`<br>`--verbose` | `bool` |  | Enable verbose logging |
 | `--version` | `kong.VersionFlag` |  | Print version and exit |
 | `--wrap-untrusted` | `bool` | false | In JSON/raw output, wrap fetched text fields in external untrusted-content markers |
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog docs tabs](gog-docs-tabs.md)
 - [Command index](README.md)

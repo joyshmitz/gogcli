@@ -178,7 +178,11 @@ gog drive tree --parent <folderId> --depth 2
 gog drive du --parent <folderId> --max 20 --json
 gog drive inventory --parent <folderId> --json
 gog drive audit sharing --parent <folderId> --internal-domain example.com --json
+gog drive audit user clawdbot@gmail.com --parent <folderId> --json
+gog drive bulk remove-public --parent <folderId> --dry-run
 gog drive labels list --json
+gog drive labels file list <fileId> --json
+gog drive labels file apply <fileId> <labelId> --text fieldId=value
 # Drive Labels requires a Google Workspace customer.
 
 # Ask Drive for non-default fields.
@@ -201,6 +205,10 @@ Docs: [`gog maps`](docs/commands/gog-maps.md),
 ```bash
 gog maps places search "Elysian Coffee Vancouver" --json
 gog maps places details <placeId> --json
+gog maps directions --origin "Vancouver, BC" --destination "Seattle, WA" --json
+gog maps distance --origins "Vancouver BC" --destinations "Seattle WA" --json
+gog maps geocode "1600 Amphitheatre Parkway, Mountain View, CA" --json
+gog maps reverse-geocode --lat=37.422 --lng=-122.084 --json
 ```
 
 ### Photos

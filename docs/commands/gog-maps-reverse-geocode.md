@@ -1,23 +1,18 @@
-# `gog drive audit`
+# `gog maps reverse-geocode`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Convert coordinates to an address
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog maps (map) reverse-geocode (reverse) --lat=STRING --lng=STRING [flags]
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
-
-## Subcommands
-
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog maps](gog-maps.md)
 
 ## Flags
 
@@ -34,8 +29,12 @@ gog drive (drv) audit <command>
 | `--gmail-no-send` | `bool` | false | Block Gmail send operations (agent safety) |
 | `-h`<br>`--help` | `kong.helpFlag` |  | Show context-sensitive help. |
 | `-j`<br>`--json`<br>`--machine` | `bool` | false | Output JSON to stdout (best for scripting) |
+| `--language` | `string` |  | BCP-47 language code |
+| `--lat` | `string` |  | Latitude |
+| `--lng` | `string` |  | Longitude |
 | `--no-input`<br>`--non-interactive`<br>`--noninteractive` | `bool` |  | Never prompt; fail instead (useful for CI) |
 | `-p`<br>`--plain`<br>`--tsv` | `bool` | false | Output stable, parseable text to stdout (TSV; no colors) |
+| `--region` | `string` |  | Region bias |
 | `--results-only` | `bool` |  | In JSON mode, emit only the primary result (drops envelope fields like nextPageToken) |
 | `--select`<br>`--pick`<br>`--project` | `string` |  | In JSON mode, select comma-separated fields (best-effort; supports dot paths). Desire path: use --fields for most commands. |
 | `-v`<br>`--verbose` | `bool` |  | Enable verbose logging |
@@ -44,5 +43,5 @@ gog drive (drv) audit <command>
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog maps](gog-maps.md)
 - [Command index](README.md)

@@ -1,23 +1,18 @@
-# `gog drive audit`
+# `gog drive labels file remove`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Remove a label from a Drive file
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog drive (drv) labels (label) file remove (rm) <fileId> <labelId>
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
-
-## Subcommands
-
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog drive labels file](gog-drive-labels-file.md)
 
 ## Flags
 
@@ -44,5 +39,5 @@ gog drive (drv) audit <command>
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog drive labels file](gog-drive-labels-file.md)
 - [Command index](README.md)

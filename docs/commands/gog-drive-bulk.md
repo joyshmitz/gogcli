@@ -1,13 +1,13 @@
-# `gog drive audit`
+# `gog drive bulk`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Bulk Drive permission operations
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog drive (drv) bulk <command>
 ```
 
 ## Parent
@@ -16,8 +16,8 @@ gog drive (drv) audit <command>
 
 ## Subcommands
 
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog drive bulk remove-public](gog-drive-bulk-remove-public.md) - Remove anyone/public permissions across files
+- [gog drive bulk update-role](gog-drive-bulk-update-role.md) - Change matching Drive permission roles across files
 
 ## Flags
 

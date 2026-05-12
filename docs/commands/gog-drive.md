@@ -18,6 +18,7 @@ gog drive (drv) <command> [flags]
 
 - [gog drive activity](gog-drive-activity.md) - Query Drive Activity audit events
 - [gog drive audit](gog-drive-audit.md) - Audit Drive sharing without mutation
+- [gog drive bulk](gog-drive-bulk.md) - Bulk Drive permission operations
 - [gog drive changes](gog-drive-changes.md) - Track Drive changes for sync and automation
 - [gog drive comments](gog-drive-comments.md) - Manage comments on files
 - [gog drive copy](gog-drive-copy.md) - Copy a file
@@ -27,7 +28,7 @@ gog drive (drv) <command> [flags]
 - [gog drive du](gog-drive-du.md) - Summarize Drive folder sizes
 - [gog drive get](gog-drive-get.md) - Get file metadata
 - [gog drive inventory](gog-drive-inventory.md) - Export a read-only Drive inventory
-- [gog drive labels](gog-drive-labels.md) - Read Drive label schemas
+- [gog drive labels](gog-drive-labels.md) - Read and modify Drive labels
 - [gog drive ls](gog-drive-ls.md) - List files in a folder (default: root)
 - [gog drive mkdir](gog-drive-mkdir.md) - Create a folder
 - [gog drive move](gog-drive-move.md) - Move a file to a different folder

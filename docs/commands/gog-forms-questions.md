@@ -1,23 +1,24 @@
-# `gog drive audit`
+# `gog forms questions`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Form questions
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog forms (form) questions <command>
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
+- [gog forms](gog-forms.md)
 
 ## Subcommands
 
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog forms questions add](gog-forms-questions-add.md) - Add a question to a form
+- [gog forms questions delete](gog-forms-questions-delete.md) - Delete a question by index
+- [gog forms questions move](gog-forms-questions-move.md) - Move a question to a new position
 
 ## Flags
 
@@ -44,5 +45,5 @@ gog drive (drv) audit <command>
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog forms](gog-forms.md)
 - [Command index](README.md)

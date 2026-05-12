@@ -1,23 +1,18 @@
-# `gog drive audit`
+# `gog docs tabs rename`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Audit Drive sharing without mutation
+Rename a tab in a Google Doc
 
 ## Usage
 
 ```bash
-gog drive (drv) audit <command>
+gog docs (doc) tabs rename (move) <docId> [flags]
 ```
 
 ## Parent
 
-- [gog drive](gog-drive.md)
-
-## Subcommands
-
-- [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
-- [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+- [gog docs tabs](gog-docs-tabs.md)
 
 ## Flags
 
@@ -38,11 +33,13 @@ gog drive (drv) audit <command>
 | `-p`<br>`--plain`<br>`--tsv` | `bool` | false | Output stable, parseable text to stdout (TSV; no colors) |
 | `--results-only` | `bool` |  | In JSON mode, emit only the primary result (drops envelope fields like nextPageToken) |
 | `--select`<br>`--pick`<br>`--project` | `string` |  | In JSON mode, select comma-separated fields (best-effort; supports dot paths). Desire path: use --fields for most commands. |
+| `--tab` | `string` |  | Existing tab title or ID |
+| `--title` | `string` |  | New user-visible tab title |
 | `-v`<br>`--verbose` | `bool` |  | Enable verbose logging |
 | `--version` | `kong.VersionFlag` |  | Print version and exit |
 | `--wrap-untrusted` | `bool` | false | In JSON/raw output, wrap fetched text fields in external untrusted-content markers |
 
 ## See Also
 
-- [gog drive](gog-drive.md)
+- [gog docs tabs](gog-docs-tabs.md)
 - [Command index](README.md)

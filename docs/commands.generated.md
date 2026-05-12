@@ -242,6 +242,11 @@ Generated from `gog schema --json`.
     - [`gog docs (doc) rename-tab <docId> [flags]`](commands/gog-docs-rename-tab.md) - Rename a tab in a Google Doc
     - [`gog docs (doc) sed <docId> [<expression>] [flags]`](commands/gog-docs-sed.md) - Regex find/replace (sed-style: s/pattern/replacement/g)
     - [`gog docs (doc) structure (struct) <docId> [flags]`](commands/gog-docs-structure.md) - Show document structure with numbered paragraphs
+    - [`gog docs (doc) tabs <command>`](commands/gog-docs-tabs.md) - Manage Google Doc tabs
+      - [`gog docs (doc) tabs add (create,new) <docId> [flags]`](commands/gog-docs-tabs-add.md) - Add a tab to a Google Doc
+      - [`gog docs (doc) tabs delete (rm,remove,del) <docId> [flags]`](commands/gog-docs-tabs-delete.md) - Delete a tab from a Google Doc
+      - [`gog docs (doc) tabs list (ls) <docId>`](commands/gog-docs-tabs-list.md) - List all tabs in a Google Doc
+      - [`gog docs (doc) tabs rename (move) <docId> [flags]`](commands/gog-docs-tabs-rename.md) - Rename a tab in a Google Doc
     - [`gog docs (doc) update <docId> [flags]`](commands/gog-docs-update.md) - Insert text at a specific index in a Google Doc
     - [`gog docs (doc) write <docId> [flags]`](commands/gog-docs-write.md) - Write content to a Google Doc
   - [`gog download (dl) <fileId> [flags]`](commands/gog-download.md) - Download a Drive file (alias for 'drive download')
@@ -250,6 +255,10 @@ Generated from `gog schema --json`.
       - [`gog drive (drv) activity query (list,ls) [flags]`](commands/gog-drive-activity-query.md) - Query Drive Activity API v2
     - [`gog drive (drv) audit <command>`](commands/gog-drive-audit.md) - Audit Drive sharing without mutation
       - [`gog drive (drv) audit sharing (permissions,perms,public,external) [flags]`](commands/gog-drive-audit-sharing.md) - Find public or external Drive permissions
+      - [`gog drive (drv) audit user <user> [flags]`](commands/gog-drive-audit-user.md) - Find Drive permissions granted to a user
+    - [`gog drive (drv) bulk <command>`](commands/gog-drive-bulk.md) - Bulk Drive permission operations
+      - [`gog drive (drv) bulk remove-public [flags]`](commands/gog-drive-bulk-remove-public.md) - Remove anyone/public permissions across files
+      - [`gog drive (drv) bulk update-role [flags]`](commands/gog-drive-bulk-update-role.md) - Change matching Drive permission roles across files
     - [`gog drive (drv) changes <command>`](commands/gog-drive-changes.md) - Track Drive changes for sync and automation
       - [`gog drive (drv) changes list (ls) --token=STRING [flags]`](commands/gog-drive-changes-list.md) - List Drive changes since a page token
       - [`gog drive (drv) changes start-token (token) [flags]`](commands/gog-drive-changes-start-token.md) - Get a Drive changes start page token
@@ -269,7 +278,11 @@ Generated from `gog schema --json`.
     - [`gog drive (drv) du [flags]`](commands/gog-drive-du.md) - Summarize Drive folder sizes
     - [`gog drive (drv) get <fileId> [flags]`](commands/gog-drive-get.md) - Get file metadata
     - [`gog drive (drv) inventory [flags]`](commands/gog-drive-inventory.md) - Export a read-only Drive inventory
-    - [`gog drive (drv) labels (label) <command>`](commands/gog-drive-labels.md) - Read Drive label schemas
+    - [`gog drive (drv) labels (label) <command>`](commands/gog-drive-labels.md) - Read and modify Drive labels
+      - [`gog drive (drv) labels (label) file <command>`](commands/gog-drive-labels-file.md) - List, apply, or remove labels on Drive files
+        - [`gog drive (drv) labels (label) file apply <fileId> <labelId> [flags]`](commands/gog-drive-labels-file-apply.md) - Apply or update a label on a Drive file
+        - [`gog drive (drv) labels (label) file list (ls) <fileId> [flags]`](commands/gog-drive-labels-file-list.md) - List labels applied to a Drive file
+        - [`gog drive (drv) labels (label) file remove (rm) <fileId> <labelId>`](commands/gog-drive-labels-file-remove.md) - Remove a label from a Drive file
       - [`gog drive (drv) labels (label) get (info,show) <name> [flags]`](commands/gog-drive-labels-get.md) - Get a Drive label schema
       - [`gog drive (drv) labels (label) list (ls) [flags]`](commands/gog-drive-labels-list.md) - List Drive label schemas
     - [`gog drive (drv) ls [flags]`](commands/gog-drive-ls.md) - List files in a folder (default: root)
@@ -292,6 +305,10 @@ Generated from `gog schema --json`.
     - [`gog forms (form) get (info,show) <formId>`](commands/gog-forms-get.md) - Get a form
     - [`gog forms (form) move-question (move-q,mq) <formId> <oldIndex> <newIndex>`](commands/gog-forms-move-question.md) - Move a question to a new position
     - [`gog forms (form) publish <formId> [flags]`](commands/gog-forms-publish.md) - Publish or unpublish a form
+    - [`gog forms (form) questions <command>`](commands/gog-forms-questions.md) - Form questions
+      - [`gog forms (form) questions add (create,new) --title=STRING <formId> [flags]`](commands/gog-forms-questions-add.md) - Add a question to a form
+      - [`gog forms (form) questions delete (rm,remove,del) <formId> <index>`](commands/gog-forms-questions-delete.md) - Delete a question by index
+      - [`gog forms (form) questions move <formId> <oldIndex> <newIndex>`](commands/gog-forms-questions-move.md) - Move a question to a new position
     - [`gog forms (form) raw <formId> [flags]`](commands/gog-forms-raw.md) - Dump raw Google Forms API response as JSON (Forms.Get; lossless; for scripting and LLM consumption)
     - [`gog forms (form) responses <command>`](commands/gog-forms-responses.md) - Form responses
       - [`gog forms (form) responses get (info,show) <formId> <responseId>`](commands/gog-forms-responses-get.md) - Get a form response
@@ -397,9 +414,13 @@ Generated from `gog schema --json`.
   - [`gog logout <email> [flags]`](commands/gog-logout.md) - Remove a stored refresh token (alias for 'auth remove')
   - [`gog ls (list) [flags]`](commands/gog-ls.md) - List Drive files (alias for 'drive ls')
   - [`gog maps (map) <command> [flags]`](commands/gog-maps.md) - Google Maps
+    - [`gog maps (map) directions (route) --origin=STRING --destination=STRING [flags]`](commands/gog-maps-directions.md) - Get directions between two locations
+    - [`gog maps (map) distance (distance-matrix,matrix) --origins=STRING --destinations=STRING [flags]`](commands/gog-maps-distance.md) - Get travel distance and duration matrix
+    - [`gog maps (map) geocode <address> ... [flags]`](commands/gog-maps-geocode.md) - Convert an address to coordinates
     - [`gog maps (map) places (place) <command>`](commands/gog-maps-places.md) - Google Maps Places API
       - [`gog maps (map) places (place) details (get,info,show) <placeId> [flags]`](commands/gog-maps-places-details.md) - Get Place details
       - [`gog maps (map) places (place) search (find) <query> ... [flags]`](commands/gog-maps-places-search.md) - Search Places by text
+    - [`gog maps (map) reverse-geocode (reverse) --lat=STRING --lng=STRING [flags]`](commands/gog-maps-reverse-geocode.md) - Convert coordinates to an address
   - [`gog me [flags]`](commands/gog-me.md) - Show your profile (alias for 'people me')
   - [`gog meet (meeting) <command> [flags]`](commands/gog-meet.md) - Google Meet
     - [`gog meet (meeting) create (new) [flags]`](commands/gog-meet-create.md) - Create a meeting space

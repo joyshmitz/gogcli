@@ -16,7 +16,11 @@ gog maps (map) <command> [flags]
 
 ## Subcommands
 
+- [gog maps directions](gog-maps-directions.md) - Get directions between two locations
+- [gog maps distance](gog-maps-distance.md) - Get travel distance and duration matrix
+- [gog maps geocode](gog-maps-geocode.md) - Convert an address to coordinates
 - [gog maps places](gog-maps-places.md) - Google Maps Places API
+- [gog maps reverse-geocode](gog-maps-reverse-geocode.md) - Convert coordinates to an address
 
 ## Flags
 

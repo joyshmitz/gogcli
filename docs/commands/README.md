@@ -2,7 +2,7 @@
 
 Every `gog` command has a generated docs page. The source of truth is the live CLI schema; run `make docs-commands` after changing command names, flags, help text, aliases, or arguments.
 
-Generated pages: 538.
+Generated pages: 559.
 
 ## Top-level Commands
 
@@ -292,6 +292,11 @@ Generated pages: 538.
     - [gog docs rename-tab](gog-docs-rename-tab.md) - Rename a tab in a Google Doc
     - [gog docs sed](gog-docs-sed.md) - Regex find/replace (sed-style: s/pattern/replacement/g)
     - [gog docs structure](gog-docs-structure.md) - Show document structure with numbered paragraphs
+    - [gog docs tabs](gog-docs-tabs.md) - Manage Google Doc tabs
+      - [gog docs tabs add](gog-docs-tabs-add.md) - Add a tab to a Google Doc
+      - [gog docs tabs delete](gog-docs-tabs-delete.md) - Delete a tab from a Google Doc
+      - [gog docs tabs list](gog-docs-tabs-list.md) - List all tabs in a Google Doc
+      - [gog docs tabs rename](gog-docs-tabs-rename.md) - Rename a tab in a Google Doc
     - [gog docs update](gog-docs-update.md) - Insert text at a specific index in a Google Doc
     - [gog docs write](gog-docs-write.md) - Write content to a Google Doc
   - [gog download](gog-download.md) - Download a Drive file (alias for 'drive download')
@@ -300,6 +305,10 @@ Generated pages: 538.
       - [gog drive activity query](gog-drive-activity-query.md) - Query Drive Activity API v2
     - [gog drive audit](gog-drive-audit.md) - Audit Drive sharing without mutation
       - [gog drive audit sharing](gog-drive-audit-sharing.md) - Find public or external Drive permissions
+      - [gog drive audit user](gog-drive-audit-user.md) - Find Drive permissions granted to a user
+    - [gog drive bulk](gog-drive-bulk.md) - Bulk Drive permission operations
+      - [gog drive bulk remove-public](gog-drive-bulk-remove-public.md) - Remove anyone/public permissions across files
+      - [gog drive bulk update-role](gog-drive-bulk-update-role.md) - Change matching Drive permission roles across files
     - [gog drive changes](gog-drive-changes.md) - Track Drive changes for sync and automation
       - [gog drive changes list](gog-drive-changes-list.md) - List Drive changes since a page token
       - [gog drive changes start-token](gog-drive-changes-start-token.md) - Get a Drive changes start page token
@@ -319,7 +328,11 @@ Generated pages: 538.
     - [gog drive du](gog-drive-du.md) - Summarize Drive folder sizes
     - [gog drive get](gog-drive-get.md) - Get file metadata
     - [gog drive inventory](gog-drive-inventory.md) - Export a read-only Drive inventory
-    - [gog drive labels](gog-drive-labels.md) - Read Drive label schemas
+    - [gog drive labels](gog-drive-labels.md) - Read and modify Drive labels
+      - [gog drive labels file](gog-drive-labels-file.md) - List, apply, or remove labels on Drive files
+        - [gog drive labels file apply](gog-drive-labels-file-apply.md) - Apply or update a label on a Drive file
+        - [gog drive labels file list](gog-drive-labels-file-list.md) - List labels applied to a Drive file
+        - [gog drive labels file remove](gog-drive-labels-file-remove.md) - Remove a label from a Drive file
       - [gog drive labels get](gog-drive-labels-get.md) - Get a Drive label schema
       - [gog drive labels list](gog-drive-labels-list.md) - List Drive label schemas
     - [gog drive ls](gog-drive-ls.md) - List files in a folder (default: root)
@@ -342,6 +355,10 @@ Generated pages: 538.
     - [gog forms get](gog-forms-get.md) - Get a form
     - [gog forms move-question](gog-forms-move-question.md) - Move a question to a new position
     - [gog forms publish](gog-forms-publish.md) - Publish or unpublish a form
+    - [gog forms questions](gog-forms-questions.md) - Form questions
+      - [gog forms questions add](gog-forms-questions-add.md) - Add a question to a form
+      - [gog forms questions delete](gog-forms-questions-delete.md) - Delete a question by index
+      - [gog forms questions move](gog-forms-questions-move.md) - Move a question to a new position
     - [gog forms raw](gog-forms-raw.md) - Dump raw Google Forms API response as JSON (Forms.Get; lossless; for scripting and LLM consumption)
     - [gog forms responses](gog-forms-responses.md) - Form responses
       - [gog forms responses get](gog-forms-responses-get.md) - Get a form response
@@ -447,9 +464,13 @@ Generated pages: 538.
   - [gog logout](gog-logout.md) - Remove a stored refresh token (alias for 'auth remove')
   - [gog ls](gog-ls.md) - List Drive files (alias for 'drive ls')
   - [gog maps](gog-maps.md) - Google Maps
+    - [gog maps directions](gog-maps-directions.md) - Get directions between two locations
+    - [gog maps distance](gog-maps-distance.md) - Get travel distance and duration matrix
+    - [gog maps geocode](gog-maps-geocode.md) - Convert an address to coordinates
     - [gog maps places](gog-maps-places.md) - Google Maps Places API
       - [gog maps places details](gog-maps-places-details.md) - Get Place details
       - [gog maps places search](gog-maps-places-search.md) - Search Places by text
+    - [gog maps reverse-geocode](gog-maps-reverse-geocode.md) - Convert coordinates to an address
   - [gog me](gog-me.md) - Show your profile (alias for 'people me')
   - [gog meet](gog-meet.md) - Google Meet
     - [gog meet create](gog-meet-create.md) - Create a meeting space

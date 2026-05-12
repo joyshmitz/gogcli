@@ -215,8 +215,14 @@ Flag aliases:
 - `gog drive changes stop <channelId> <resourceId>`
 - `gog drive activity query [--file FILE_ID|--folder FOLDER_ID] [--actions edit,share] [--from RFC3339] [--to RFC3339] [--filter FILTER]`
 - `gog drive audit sharing [--file FILE_ID|--parent FOLDER_ID] [--depth N] [--max N] [--internal-domain DOMAIN] [--public-only|--external-only] [--fail-found]`
+- `gog drive audit user <email> [--file FILE_ID|--parent FOLDER_ID] [--depth N] [--max N] [--fail-found]`
+- `gog drive bulk remove-public [--file FILE_ID|--parent FOLDER_ID] [--depth N] [--dry-run] [--force]`
+- `gog drive bulk update-role --from reader|commenter|writer --to reader|commenter|writer [--file FILE_ID|--parent FOLDER_ID] [--type user|group|domain|anyone] [--target EMAIL_OR_DOMAIN] [--dry-run] [--force]`
 - `gog drive labels list [--max N] [--page TOKEN] [--customer CUSTOMERS_ID] [--published-only]` (requires a Google Workspace customer)
 - `gog drive labels get <labelId|labels/ID> [--view basic|full]` (requires a Google Workspace customer)
+- `gog drive labels file list <fileId> [--max N] [--page TOKEN]`
+- `gog drive labels file apply <fileId> <labelId> [--text FIELD=VALUE] [--selection FIELD=CHOICE[,CHOICE]] [--integer FIELD=N] [--date FIELD=YYYY-MM-DD] [--user FIELD=email] [--unset FIELD] [--fields-json JSON]`
+- `gog drive labels file remove <fileId> <labelId>`
 - `gog slides thumbnail <presentationId> <slideId> [--size small|medium|large] [--format png|jpeg] [--out PATH]`
 - `gog calendar calendars`
 - `gog calendar create-calendar <summary> [--description D] [--timezone TZ] [--location L]`
@@ -233,6 +239,10 @@ Flag aliases:
 - `gog calendar respond <calendarId> <eventId> --status accepted|declined|tentative [--send-updates all|none|externalOnly]`
 - `gog maps places search <query> [--language LANG] [--region REGION] [--fields FIELD_MASK] [--max N]`
 - `gog maps places details <placeId> [--language LANG] [--region REGION] [--fields FIELD_MASK]`
+- `gog maps directions --origin ORIGIN --destination DESTINATION [--mode driving|walking|bicycling|transit] [--language LANG] [--region REGION]`
+- `gog maps distance --origins CSV --destinations CSV [--mode driving|walking|bicycling|transit] [--units metric|imperial] [--language LANG] [--region REGION]`
+- `gog maps geocode <address...> [--language LANG] [--region REGION]`
+- `gog maps reverse-geocode --lat FLOAT --lng FLOAT [--language LANG] [--region REGION]`
 - `gog photos list [--max N] [--page TOKEN]`
 - `gog photos search [--album ALBUM_ID] [--media-type PHOTO|VIDEO|ALL_MEDIA] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--include-archived] [--max N] [--page TOKEN]`
 - `gog photos get <mediaItemId>`

@@ -2,7 +2,7 @@
 
 read_when:
 - Auditing Drive folder contents, size, or inventory without changing files.
-- Reviewing `drive tree`, `drive du`, or `drive inventory`.
+- Reviewing `drive tree`, `drive du`, `drive inventory`, or permission audits.
 
 Drive audit commands are read-only reporting helpers. They are meant for cleanup
 planning, migration review, and automation that needs stable JSON without
@@ -13,6 +13,8 @@ writing back to Drive.
 - [`gog drive tree`](commands/gog-drive-tree.md)
 - [`gog drive du`](commands/gog-drive-du.md)
 - [`gog drive inventory`](commands/gog-drive-inventory.md)
+- [`gog drive audit sharing`](commands/gog-drive-audit-sharing.md)
+- [`gog drive audit user`](commands/gog-drive-audit-user.md)
 - [`gog drive ls`](commands/gog-drive-ls.md)
 - [`gog drive get`](commands/gog-drive-get.md)
 - [`gog drive raw`](commands/gog-drive-raw.md)
@@ -53,6 +55,29 @@ gog drive inventory --parent <folderId> --max 0 --depth 0 --json > drive-invento
 
 Use inventory output when you need a machine-readable list of Drive objects for
 review, diffing, or downstream cleanup scripts.
+
+## Permission Audits
+
+Find public or external shares without changing files:
+
+```bash
+gog drive audit sharing --parent <folderId> --internal-domain example.com --json
+gog drive audit sharing --parent <folderId> --public-only --fail-found
+```
+
+Find files shared with a specific user:
+
+```bash
+gog drive audit user clawdbot@gmail.com --parent <folderId> --json
+```
+
+Bulk permission operations are intentionally separate from audits and require a
+dry run or confirmation:
+
+```bash
+gog drive bulk remove-public --parent <folderId> --dry-run
+gog drive bulk update-role --parent <folderId> --from writer --to reader --target contractor@example.com --dry-run
+```
 
 ## Shared Drives
 

@@ -75,7 +75,8 @@ type DriveCmd struct {
 	Unshare     DriveUnshareCmd     `cmd:"" name:"unshare" help:"Remove a permission from a file"`
 	Permissions DrivePermissionsCmd `cmd:"" name:"permissions" help:"List permissions on a file"`
 	Audit       DriveAuditCmd       `cmd:"" name:"audit" help:"Audit Drive sharing without mutation"`
-	Labels      DriveLabelsCmd      `cmd:"" name:"labels" aliases:"label" help:"Read Drive label schemas"`
+	Bulk        DriveBulkCmd        `cmd:"" name:"bulk" help:"Bulk Drive permission operations"`
+	Labels      DriveLabelsCmd      `cmd:"" name:"labels" aliases:"label" help:"Read and modify Drive labels"`
 	URL         DriveURLCmd         `cmd:"" name:"url" help:"Print web URLs for files"`
 	Comments    DriveCommentsCmd    `cmd:"" name:"comments" help:"Manage comments on files"`
 	Drives      DriveDrivesCmd      `cmd:"" name:"drives" help:"List shared drives (Team Drives)"`
