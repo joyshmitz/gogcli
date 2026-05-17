@@ -288,10 +288,14 @@ type keyringResult struct {
 // and will leak. This is acceptable for a CLI tool since the process exits on this
 // error, but would need refactoring for long-running use.
 func openKeyringWithTimeout(cfg keyring.Config, timeout time.Duration) (keyring.Keyring, error) {
+	return openKeyringWithTimeoutFunc(cfg, timeout, keyringOpenFunc)
+}
+
+func openKeyringWithTimeoutFunc(cfg keyring.Config, timeout time.Duration, open func(keyring.Config) (keyring.Keyring, error)) (keyring.Keyring, error) {
 	ch := make(chan keyringResult, 1)
 
 	go func() {
-		ring, err := keyringOpenFunc(cfg)
+		ring, err := open(cfg)
 		ch <- keyringResult{ring, err}
 	}()
 

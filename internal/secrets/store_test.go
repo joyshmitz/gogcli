@@ -244,15 +244,12 @@ func TestOpenKeyringWithTimeout_Timeout(t *testing.T) {
 	cfg := keyringConfig(keyringDir)
 
 	blockCh := make(chan struct{})
-	originalOpen := keyringOpenFunc
-	keyringOpenFunc = func(_ keyring.Config) (keyring.Keyring, error) {
+	open := func(_ keyring.Config) (keyring.Keyring, error) {
 		<-blockCh
 		return nil, errKeyringOpenBlocked
 	}
 
-	t.Cleanup(func() { keyringOpenFunc = originalOpen })
-
-	_, err = openKeyringWithTimeout(cfg, 10*time.Millisecond)
+	_, err = openKeyringWithTimeoutFunc(cfg, 10*time.Millisecond, open)
 
 	close(blockCh)
 
