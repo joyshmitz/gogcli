@@ -116,7 +116,7 @@ func replaceDocsTextRange(ctx context.Context, svc *docs.Service, doc *docs.Docu
 	return nil
 }
 
-func replaceDocsMarkdownRange(ctx context.Context, svc *docs.Service, doc *docs.Document, startIdx, endIdx int64, replaceText string, tabID string) error {
+func replaceDocsMarkdownRange(ctx context.Context, svc *docs.Service, doc *docs.Document, startIdx, endIdx int64, replaceText string, tabID string) (requestCount int, inserted int, err error) {
 	cleaned, images := extractMarkdownImages(replaceText)
 	elements := ParseMarkdown(cleaned)
 	prefix := ""
@@ -158,13 +158,14 @@ func replaceDocsMarkdownRange(ctx context.Context, svc *docs.Service, doc *docs.
 		requests = append(requests, formattingRequests...)
 	}
 
-	_, err := svc.Documents.BatchUpdate(doc.DocumentId, &docs.BatchUpdateDocumentRequest{
+	_, err = svc.Documents.BatchUpdate(doc.DocumentId, &docs.BatchUpdateDocumentRequest{
 		WriteControl: &docs.WriteControl{RequiredRevisionId: doc.RevisionId},
 		Requests:     requests,
 	}).Context(ctx).Do()
 	if err != nil {
-		return fmt.Errorf("replace (markdown): %w", err)
+		return 0, 0, fmt.Errorf("replace (markdown): %w", err)
 	}
+	requestCount = len(requests)
 
 	if len(tables) > 0 {
 		tableInserter := NewTableInserter(svc, doc.DocumentId)
@@ -173,7 +174,7 @@ func replaceDocsMarkdownRange(ctx context.Context, svc *docs.Service, doc *docs.
 			tableIndex := table.StartIndex + tableOffset
 			tableEnd, tableErr := tableInserter.InsertNativeTable(ctx, tableIndex, table.Cells, tabID)
 			if tableErr != nil {
-				return fmt.Errorf("insert native table: %w", tableErr)
+				return requestCount, len(prefix) + len(textToInsert), fmt.Errorf("insert native table: %w", tableErr)
 			}
 			tableOffset = nextTableInsertOffset(tableOffset, tableIndex, tableEnd)
 		}
@@ -183,11 +184,11 @@ func replaceDocsMarkdownRange(ctx context.Context, svc *docs.Service, doc *docs.
 		imgErr := insertImagesIntoDocs(ctx, svc, doc.DocumentId, images, tabID)
 		cleanupDocsImagePlaceholders(ctx, svc, doc.DocumentId, images, tabID)
 		if imgErr != nil {
-			return fmt.Errorf("insert images: %w", imgErr)
+			return requestCount, len(prefix) + len(textToInsert), fmt.Errorf("insert images: %w", imgErr)
 		}
 	}
 
-	return nil
+	return requestCount, len(prefix) + len(textToInsert), nil
 }
 
 func markdownReplaceNeedsParagraphBoundary(doc *docs.Document, startIdx int64, tabID string, elements []MarkdownElement) bool {
