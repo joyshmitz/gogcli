@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -46,6 +47,11 @@ func TestAuthManageCmd_InvalidService(t *testing.T) {
 
 	if err := runKong(t, &AuthManageCmd{}, []string{"--services", "nope"}, context.Background(), nil); err == nil {
 		t.Fatalf("expected error")
+	} else {
+		var exitErr *ExitError
+		if !errors.As(err, &exitErr) || exitErr.Code != 2 {
+			t.Fatalf("expected usage exit code 2, got %#v", err)
+		}
 	}
 }
 

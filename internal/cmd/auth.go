@@ -68,7 +68,7 @@ func parseAuthServices(servicesCSV string) ([]googleauth.Service, error) {
 	for _, p := range parts {
 		svc, err := googleauth.ParseService(p)
 		if err != nil {
-			return nil, err
+			return nil, usage(err.Error())
 		}
 		switch svc {
 		case googleauth.ServiceAdmin, googleauth.ServiceGroups, googleauth.ServiceKeep:
