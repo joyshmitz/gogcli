@@ -190,6 +190,15 @@ func acquireTrackingConfigLock() (func(), error) {
 
 // LoadConfig loads tracking configuration from disk for the specified account.
 func LoadConfig(account string) (*Config, error) {
+	return loadConfig(account, true)
+}
+
+// LoadConfigMetadata loads tracking configuration without hydrating secrets.
+func LoadConfigMetadata(account string) (*Config, error) {
+	return loadConfig(account, false)
+}
+
+func loadConfig(account string, hydrate bool) (*Config, error) {
 	account = normalizeAccount(account)
 	if account == "" {
 		return nil, errMissingAccount
@@ -216,12 +225,20 @@ func LoadConfig(account string) (*Config, error) {
 			return &Config{Enabled: false}, nil
 		}
 
+		if !hydrate {
+			return cfg, nil
+		}
+
 		return hydrateConfig(account, cfg)
 	}
 
 	var legacy Config
 	if err := json.Unmarshal(data, &legacy); err != nil {
 		return nil, fmt.Errorf("parse tracking config: %w", err)
+	}
+
+	if !hydrate {
+		return &legacy, nil
 	}
 
 	return hydrateConfig(account, &legacy)

@@ -37,7 +37,11 @@ func (c *GmailTrackSetupCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return usage("missing --account (dry-run requires an explicit account and does not auto-select)")
 	}
 
-	account, cfg, err := loadTrackingConfigForAccount(flags)
+	loadConfig := loadTrackingConfigForAccount
+	if flags != nil && flags.DryRun {
+		loadConfig = loadTrackingConfigMetadataForAccount
+	}
+	account, cfg, err := loadConfig(flags)
 	if err != nil {
 		return err
 	}
@@ -84,13 +88,21 @@ func (c *GmailTrackSetupCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return usage("required: --worker-url")
 	}
 
+	if c.WorkerDir == "" {
+		c.WorkerDir = filepath.Join("internal", "tracking", "worker")
+	}
+
 	explicitTrackingKey := strings.TrimSpace(c.TrackingKey) != ""
-	key := strings.TrimSpace(c.TrackingKey)
+	if err = c.dryRunSetupExit(ctx, flags, account, cfg, workerName, explicitTrackingKey); err != nil {
+		return err
+	}
+
 	currentVersion := cfg.TrackingCurrentKeyVersion
 	if currentVersion <= 0 {
 		currentVersion = 1
 	}
 
+	key := strings.TrimSpace(c.TrackingKey)
 	trackingKeys := map[int]string{}
 	if !explicitTrackingKey {
 		versions := tracking.NormalizeTrackingKeyVersions(cfg.TrackingKeyVersions, currentVersion)
@@ -135,26 +147,6 @@ func (c *GmailTrackSetupCmd) Run(ctx context.Context, flags *RootFlags) error {
 		if err != nil {
 			return fmt.Errorf("generate admin key: %w", err)
 		}
-	}
-
-	if c.WorkerDir == "" {
-		c.WorkerDir = filepath.Join("internal", "tracking", "worker")
-	}
-
-	// Avoid touching keyring and avoid provisioning/deploying in dry-run mode.
-	if err := dryRunExit(ctx, flags, "gmail.track.setup", map[string]any{
-		"account":               account,
-		"worker_url":            c.WorkerURL,
-		"worker_name":           workerName,
-		"database_name":         c.DatabaseName,
-		"deploy":                c.Deploy,
-		"worker_dir":            c.WorkerDir,
-		"tracking_key_set":      strings.TrimSpace(key) != "",
-		"tracking_key_version":  currentVersion,
-		"tracking_key_versions": versions,
-		"admin_key_set":         strings.TrimSpace(adminKey) != "",
-	}); err != nil {
-		return err
 	}
 
 	if err := tracking.SaveTrackingKeys(account, trackingKeys, currentVersion, adminKey); err != nil {
@@ -248,6 +240,46 @@ func (c *GmailTrackSetupCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	return nil
+}
+
+func (c *GmailTrackSetupCmd) dryRunSetupExit(
+	ctx context.Context,
+	flags *RootFlags,
+	account string,
+	cfg *tracking.Config,
+	workerName string,
+	explicitTrackingKey bool,
+) error {
+	currentVersion := cfg.TrackingCurrentKeyVersion
+	if currentVersion <= 0 {
+		currentVersion = 1
+	}
+	if explicitTrackingKey {
+		currentVersion = 1
+	}
+
+	versions := tracking.NormalizeTrackingKeyVersions(cfg.TrackingKeyVersions, currentVersion)
+	if explicitTrackingKey {
+		versions = []int{currentVersion}
+	}
+	if len(versions) == 0 {
+		versions = []int{currentVersion}
+	}
+
+	// Dry-run reports setup intent only. Existing keyring-backed config must not
+	// force secret reads just to preview the request.
+	return dryRunExit(ctx, flags, "gmail.track.setup", map[string]any{
+		"account":               account,
+		"worker_url":            c.WorkerURL,
+		"worker_name":           workerName,
+		"database_name":         c.DatabaseName,
+		"deploy":                c.Deploy,
+		"worker_dir":            c.WorkerDir,
+		"tracking_key_set":      true,
+		"tracking_key_version":  currentVersion,
+		"tracking_key_versions": versions,
+		"admin_key_set":         true,
+	})
 }
 
 func generateAdminKey() (string, error) {
