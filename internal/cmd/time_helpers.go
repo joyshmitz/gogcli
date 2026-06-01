@@ -167,7 +167,7 @@ func ResolveTimeRangeWithDefaults(ctx context.Context, svc *calendar.Service, fl
 
 	weekStart, err := resolveWeekStart(flags.WeekStart)
 	if err != nil {
-		return nil, err
+		return nil, newUsageError(err)
 	}
 
 	// Handle convenience flags first
@@ -190,7 +190,7 @@ func ResolveTimeRangeWithDefaults(ctx context.Context, svc *calendar.Service, fl
 		if flags.From != "" {
 			from, err = parseTimeExpr(flags.From, now, loc)
 			if err != nil {
-				return nil, fmt.Errorf("invalid --from: %w", err)
+				return nil, usagef("invalid --from: %v", err)
 			}
 		} else {
 			from = now.Add(defaults.FromOffset)
@@ -200,7 +200,7 @@ func ResolveTimeRangeWithDefaults(ctx context.Context, svc *calendar.Service, fl
 		case flags.To != "":
 			to, err = parseTimeExprEndOfDay(flags.To, now, loc)
 			if err != nil {
-				return nil, fmt.Errorf("invalid --to: %w", err)
+				return nil, usagef("invalid --to: %v", err)
 			}
 		case flags.From != "" && defaults.ToFromOffset != 0:
 			to = from.Add(defaults.ToFromOffset)

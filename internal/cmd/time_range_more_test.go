@@ -124,6 +124,18 @@ func TestResolveTimeRangeWithDefaultsInvalidFrom(t *testing.T) {
 	flags := TimeRangeFlags{From: "nope"}
 	if _, err := ResolveTimeRangeWithDefaults(context.Background(), svc, flags, TimeRangeDefaults{}); err == nil {
 		t.Fatalf("expected error")
+	} else if got := ExitCode(err); got != 2 {
+		t.Fatalf("ExitCode = %d, want 2 (err=%v)", got, err)
+	}
+}
+
+func TestResolveTimeRangeWithDefaultsInvalidTo(t *testing.T) {
+	svc := newCalendarServiceWithTimezone(t, "UTC")
+	flags := TimeRangeFlags{To: "nope"}
+	if _, err := ResolveTimeRangeWithDefaults(context.Background(), svc, flags, TimeRangeDefaults{}); err == nil {
+		t.Fatalf("expected error")
+	} else if got := ExitCode(err); got != 2 {
+		t.Fatalf("ExitCode = %d, want 2 (err=%v)", got, err)
 	}
 }
 
@@ -132,6 +144,8 @@ func TestResolveTimeRangeWithDefaultsWeekStartError(t *testing.T) {
 	flags := TimeRangeFlags{Week: true, WeekStart: "nope"}
 	if _, err := ResolveTimeRangeWithDefaults(context.Background(), svc, flags, TimeRangeDefaults{}); err == nil {
 		t.Fatalf("expected error")
+	} else if got := ExitCode(err); got != 2 {
+		t.Fatalf("ExitCode = %d, want 2 (err=%v)", got, err)
 	}
 }
 
