@@ -302,9 +302,61 @@ func TestSheetsFormat_ValidationErrors(t *testing.T) {
 	}
 }
 
+func TestSheetsQualifiedRangeValidationErrors(t *testing.T) {
+	u, uiErr := ui.New(ui.Options{Stdout: io.Discard, Stderr: io.Discard, Color: "never"})
+	if uiErr != nil {
+		t.Fatalf("ui.New: %v", uiErr)
+	}
+	ctx := ui.WithUI(context.Background(), u)
+	flags := &RootFlags{Account: "a@b.com", DryRun: true}
+	note := "test"
+
+	for _, tc := range []struct {
+		name string
+		run  func() error
+	}{
+		{
+			name: "update note",
+			run: func() error {
+				return (&SheetsUpdateNoteCmd{SpreadsheetID: "s1", Range: "A1", Note: &note}).Run(ctx, flags)
+			},
+		},
+		{
+			name: "merge",
+			run: func() error {
+				return (&SheetsMergeCmd{SpreadsheetID: "s1", Range: "A1:B2"}).Run(ctx, flags)
+			},
+		},
+		{
+			name: "number format",
+			run: func() error {
+				return (&SheetsNumberFormatCmd{SpreadsheetID: "s1", Range: "A1", Type: "NUMBER"}).Run(ctx, flags)
+			},
+		},
+		{
+			name: "copy paste",
+			run: func() error {
+				return (&SheetsCopyPasteCmd{SpreadsheetID: "s1", Source: "A1", Dest: "Sheet1!B2"}).Run(ctx, flags)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.run()
+			if err == nil {
+				t.Fatal("expected missing sheet name error")
+			}
+			if got := ExitCode(err); got != 2 {
+				t.Fatalf("ExitCode = %d, want 2 (err=%v)", got, err)
+			}
+		})
+	}
+}
+
 func TestParseSheetRangeAndGridRange(t *testing.T) {
 	if _, err := parseSheetRange("A1:B2", "format"); err == nil {
 		t.Fatalf("expected missing sheet name error")
+	} else if got := ExitCode(err); got != 2 {
+		t.Fatalf("ExitCode = %d, want 2 (err=%v)", got, err)
 	}
 
 	r, err := parseSheetRange("Sheet1!B2:C3", "format")

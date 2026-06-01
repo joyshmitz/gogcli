@@ -82,10 +82,10 @@ func toGridRange(r a1Range, sheetID int64) *sheets.GridRange {
 func parseSheetRange(a1, label string) (a1Range, error) {
 	r, err := parseA1Range(a1)
 	if err != nil {
-		return a1Range{}, fmt.Errorf("parse %s range: %w", label, err)
+		return a1Range{}, usagef("parse %s range: %v", label, err)
 	}
 	if strings.TrimSpace(r.SheetName) == "" {
-		return a1Range{}, fmt.Errorf("%s range must include a sheet name", label)
+		return a1Range{}, usagef("%s range must include a sheet name", label)
 	}
 	return r, nil
 }
