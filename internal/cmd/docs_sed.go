@@ -128,7 +128,7 @@ func (c *DocsSedCmd) Run(ctx context.Context, flags *RootFlags) error {
 	for i, raw := range rawExprs {
 		expr, parseErr := parseFullExpr(raw)
 		if parseErr != nil {
-			return fmt.Errorf("expression %d (%q): %w", i+1, raw, parseErr)
+			return usagef("expression %d (%q): %v", i+1, raw, parseErr)
 		}
 		parsed = append(parsed, expr)
 	}

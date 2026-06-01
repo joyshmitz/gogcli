@@ -191,6 +191,33 @@ func TestDocsSedCmd_InvalidExpression(t *testing.T) {
 	}
 }
 
+func TestDocsSedCmd_ParseErrorsAreUsage(t *testing.T) {
+	tests := []struct {
+		name string
+		expr string
+	}{
+		{"not starting with command", "x/foo/bar/"},
+		{"missing replacement", "s/foo"},
+		{"address without command", "5"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := newDocsCmdContext(t)
+			err := (&DocsSedCmd{DocID: "doc1", Expression: tt.expr}).Run(ctx, &RootFlags{DryRun: true})
+			if err == nil {
+				t.Fatalf("expected parse error")
+			}
+			if got := ExitCode(err); got != 2 {
+				t.Fatalf("ExitCode = %d, want 2 (err=%v)", got, err)
+			}
+			if !strings.Contains(err.Error(), "expression 1") {
+				t.Fatalf("error should identify expression index, got %v", err)
+			}
+		})
+	}
+}
+
 func TestDocsSedCmd_InvalidRegex(t *testing.T) {
 	pattern, _, _, err := parseSedExpr("s/[unclosed/replacement/")
 	if err != nil {
