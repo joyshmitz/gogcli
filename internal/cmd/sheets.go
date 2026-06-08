@@ -47,7 +47,7 @@ type SheetsCmd struct {
 	Notes         SheetsNotesCmd         `cmd:"" name:"notes" help:"Get cell notes from a range"`
 	UpdateNote    SheetsUpdateNoteCmd    `cmd:"" name:"update-note" aliases:"set-note" help:"Set or clear a cell note"`
 	FindReplace   SheetsFindReplaceCmd   `cmd:"" name:"find-replace" help:"Find and replace text across a spreadsheet"`
-	Links         SheetsLinksCmd         `cmd:"" name:"links" aliases:"hyperlinks" help:"Get cell hyperlinks from a range"`
+	Links         SheetsLinksCmd         `cmd:"" name:"links" aliases:"hyperlinks" help:"Get or set cell hyperlinks"`
 	Named         SheetsNamedRangesCmd   `cmd:"" name:"named-ranges" aliases:"namedranges,nr" help:"Manage named ranges"`
 	Table         SheetsTableCmd         `cmd:"" name:"table" aliases:"tables" help:"Manage Google Sheets tables"`
 	Metadata      SheetsMetadataCmd      `cmd:"" name:"metadata" aliases:"info" help:"Get spreadsheet metadata"`

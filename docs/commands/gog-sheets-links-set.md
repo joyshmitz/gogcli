@@ -1,23 +1,18 @@
-# `gog sheets links`
+# `gog sheets links set`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Get or set cell hyperlinks
+Set cell hyperlinks (rich-text links)
 
 ## Usage
 
 ```bash
-gog sheets (sheet) links (hyperlinks) <command>
+gog sheets (sheet) links (hyperlinks) set (write) <spreadsheetId> [<cell> [<url> [<text>]]] [flags]
 ```
 
 ## Parent
 
-- [gog sheets](gog-sheets.md)
-
-## Subcommands
-
-- [gog sheets links get](gog-sheets-links-get.md) - Get cell hyperlinks from a range
-- [gog sheets links set](gog-sheets-links-set.md) - Set cell hyperlinks (rich-text links)
+- [gog sheets links](gog-sheets-links.md)
 
 ## Flags
 
@@ -25,6 +20,7 @@ gog sheets (sheet) links (hyperlinks) <command>
 | --- | --- | --- | --- |
 | `--access-token` | `string` |  | Use provided access token directly (bypasses stored refresh tokens; token expires in ~1h) |
 | `-a`<br>`--account`<br>`--acct` | `string` |  | Account email for API commands (gmail/calendar/chat/classroom/drive/drivelabels/docs/slides/contacts/tasks/people/sheets/forms/sites/appscript/analytics/searchconsole/youtube/photos) |
+| `--cells-json` | `string` |  | Batch: JSON array of {cell,url,text} or {cell,runs:[{text,uri}]} objects, written in one request. |
 | `--client` | `string` |  | OAuth client name (selects stored credentials + token bucket) |
 | `--color` | `string` | auto | Color output: auto\|always\|never |
 | `--disable-commands` | `string` |  | Comma-separated list of disabled commands; dot paths allowed |
@@ -39,6 +35,7 @@ gog sheets (sheet) links (hyperlinks) <command>
 | `--no-input`<br>`--non-interactive`<br>`--noninteractive` | `bool` |  | Never prompt; fail instead (useful for CI) |
 | `-p`<br>`--plain`<br>`--tsv` | `bool` | false | Output stable, parseable text to stdout (TSV; no colors) |
 | `--results-only` | `bool` |  | In JSON mode, emit only the primary result (drops envelope fields like nextPageToken) |
+| `--runs-json` | `string` |  | Multi-link cell: JSON array of runs, eg. [{"text":"Act A","uri":"https://a"},{"text":" / "},{"text":"Act B","uri":"https://b"}]. A run with an empty uri is plain text. |
 | `--select`<br>`--pick`<br>`--project` | `string` |  | In JSON mode, select comma-separated fields (best-effort; supports dot paths). Desire path: use --fields for most commands. |
 | `-v`<br>`--verbose` | `bool` |  | Enable verbose logging |
 | `--version` | `kong.VersionFlag` |  | Print version and exit |
@@ -46,5 +43,5 @@ gog sheets (sheet) links (hyperlinks) <command>
 
 ## See Also
 
-- [gog sheets](gog-sheets.md)
+- [gog sheets links](gog-sheets-links.md)
 - [Command index](README.md)

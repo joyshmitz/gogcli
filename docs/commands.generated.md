@@ -501,7 +501,9 @@ Generated from `gog schema --json`.
     - [`gog sheets (sheet) freeze <spreadsheetId> [flags]`](commands/gog-sheets-freeze.md) - Freeze rows and columns on a sheet
     - [`gog sheets (sheet) get (read,show) <spreadsheetId> <range> [flags]`](commands/gog-sheets-get.md) - Get values from a range
     - [`gog sheets (sheet) insert <spreadsheetId> <sheet> <dimension> <start> [flags]`](commands/gog-sheets-insert.md) - Insert empty rows or columns into a sheet
-    - [`gog sheets (sheet) links (hyperlinks) <spreadsheetId> <range>`](commands/gog-sheets-links.md) - Get cell hyperlinks from a range
+    - [`gog sheets (sheet) links (hyperlinks) <command>`](commands/gog-sheets-links.md) - Get or set cell hyperlinks
+      - [`gog sheets (sheet) links (hyperlinks) get (list,show) <spreadsheetId> <range>`](commands/gog-sheets-links-get.md) - Get cell hyperlinks from a range
+      - [`gog sheets (sheet) links (hyperlinks) set (write) <spreadsheetId> [<cell> [<url> [<text>]]] [flags]`](commands/gog-sheets-links-set.md) - Set cell hyperlinks (rich-text links)
     - [`gog sheets (sheet) merge <spreadsheetId> <range> [flags]`](commands/gog-sheets-merge.md) - Merge cells in a range
     - [`gog sheets (sheet) metadata (info) <spreadsheetId>`](commands/gog-sheets-metadata.md) - Get spreadsheet metadata
     - [`gog sheets (sheet) named-ranges (namedranges,nr) <command>`](commands/gog-sheets-named-ranges.md) - Manage named ranges

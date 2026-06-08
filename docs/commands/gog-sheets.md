@@ -33,7 +33,7 @@ gog sheets (sheet) <command> [flags]
 - [gog sheets freeze](gog-sheets-freeze.md) - Freeze rows and columns on a sheet
 - [gog sheets get](gog-sheets-get.md) - Get values from a range
 - [gog sheets insert](gog-sheets-insert.md) - Insert empty rows or columns into a sheet
-- [gog sheets links](gog-sheets-links.md) - Get cell hyperlinks from a range
+- [gog sheets links](gog-sheets-links.md) - Get or set cell hyperlinks
 - [gog sheets merge](gog-sheets-merge.md) - Merge cells in a range
 - [gog sheets metadata](gog-sheets-metadata.md) - Get spreadsheet metadata
 - [gog sheets named-ranges](gog-sheets-named-ranges.md) - Manage named ranges

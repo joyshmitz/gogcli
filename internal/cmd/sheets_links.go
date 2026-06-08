@@ -12,12 +12,20 @@ import (
 	"github.com/steipete/gogcli/internal/ui"
 )
 
+// SheetsLinksCmd groups the hyperlink read (get) and write (set) subcommands.
+// get is the default so the historical `gog sheets links <id> <range>` form
+// keeps working unchanged.
 type SheetsLinksCmd struct {
+	Get SheetsLinksGetCmd `cmd:"" default:"withargs" aliases:"list,show" help:"Get cell hyperlinks from a range"`
+	Set SheetsLinksSetCmd `cmd:"" name:"set" aliases:"write" help:"Set cell hyperlinks (rich-text links)"`
+}
+
+type SheetsLinksGetCmd struct {
 	SpreadsheetID string `arg:"" name:"spreadsheetId" help:"Spreadsheet ID"`
 	Range         string `arg:"" name:"range" help:"Range (eg. Sheet1!A1:B10)"`
 }
 
-func (c *SheetsLinksCmd) Run(ctx context.Context, flags *RootFlags) error {
+func (c *SheetsLinksGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 	u := ui.FromContext(ctx)
 
 	spreadsheetID := normalizeGoogleID(strings.TrimSpace(c.SpreadsheetID))
