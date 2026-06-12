@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/api/docs/v1"
 
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -98,7 +99,7 @@ func (c *DocsCellUpdateCmd) Run(ctx context.Context, flags *RootFlags) error {
 		writeStart = writeEnd
 		prefixBoundary = format == docsContentFormatMarkdown &&
 			strings.TrimSpace(strings.TrimSuffix(cellText, "\n")) != "" &&
-			markdownCellAppendNeedsBoundary(ParseMarkdown(content))
+			markdownCellAppendNeedsBoundary(docsmarkdown.ParseMarkdown(content))
 	}
 
 	if err := updateDocsCellContent(ctx, svc, loaded.full, writeStart, writeEnd, content, format, c.Append, prefixBoundary, c.Tab); err != nil {
@@ -219,7 +220,7 @@ func updateDocsCellContent(ctx context.Context, svc *docs.Service, doc *docs.Doc
 }
 
 func buildMarkdownCellContent(content string, baseIndex int64, tabID string) ([]*docs.Request, string, int64, error) {
-	elements := ParseMarkdown(content)
+	elements := docsmarkdown.ParseMarkdown(content)
 	formatReqs, text, tables := MarkdownToDocsRequests(elements, baseIndex, tabID)
 	if len(tables) > 0 {
 		return nil, "", 0, usage("markdown tables are not supported inside table cells")
@@ -234,19 +235,19 @@ func buildMarkdownCellContent(content string, baseIndex int64, tabID string) ([]
 	// Report final document growth so later native-table offsets stay exact.
 	insertedLen := utf16Len(text)
 	for _, element := range elements {
-		if (element.Type == MDListItem || element.Type == MDNumberedList) && element.Level > 0 {
+		if (element.Type == docsmarkdown.MDListItem || element.Type == docsmarkdown.MDNumberedList) && element.Level > 0 {
 			insertedLen -= int64(element.Level)
 		}
 	}
 	return formatReqs, text, insertedLen, nil
 }
 
-func markdownCellAppendNeedsBoundary(elements []MarkdownElement) bool {
+func markdownCellAppendNeedsBoundary(elements []docsmarkdown.MarkdownElement) bool {
 	if len(elements) != 1 {
 		return len(elements) > 1
 	}
 	switch elements[0].Type {
-	case MDText, MDParagraph:
+	case docsmarkdown.MDText, docsmarkdown.MDParagraph:
 		return false
 	default:
 		return true

@@ -9,6 +9,7 @@ import (
 	"google.golang.org/api/docs/v1"
 	"google.golang.org/api/drive/v3"
 
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -142,10 +143,10 @@ func docsWriteMarkdownDocument(content string) *docs.Document {
 
 	doc := &docs.Document{Body: &docs.Body{}}
 	index := int64(1)
-	elements := ParseMarkdown(cleaned)
-	stripMarkdownElementHeadingAnchors(elements)
+	elements := docsmarkdown.ParseMarkdown(cleaned)
+	docsmarkdown.StripElementHeadingAnchors(elements)
 	for _, element := range elements {
-		if element.Type == MDTable {
+		if element.Type == docsmarkdown.MDTable {
 			table, next := docsWriteMarkdownTable(element.TableCells, index)
 			if table != nil {
 				doc.Body.Content = append(doc.Body.Content, table)
@@ -153,7 +154,7 @@ func docsWriteMarkdownDocument(content string) *docs.Document {
 			}
 			continue
 		}
-		_, text, _ := MarkdownToDocsRequests([]MarkdownElement{element}, index, "")
+		_, text, _ := MarkdownToDocsRequests([]docsmarkdown.MarkdownElement{element}, index, "")
 		if text == "" {
 			continue
 		}
@@ -172,8 +173,8 @@ func docsWriteMarkdownTable(cells [][]string, index int64) (*docs.StructuralElem
 	for _, rowCells := range cells {
 		row := &docs.TableRow{}
 		for _, cellMarkdown := range rowCells {
-			elements := ParseMarkdown(cellMarkdown)
-			stripMarkdownElementHeadingAnchors(elements)
+			elements := docsmarkdown.ParseMarkdown(cellMarkdown)
+			docsmarkdown.StripElementHeadingAnchors(elements)
 			_, text, _ := MarkdownToDocsRequests(elements, index, "")
 			if text == "" {
 				text = "\n"

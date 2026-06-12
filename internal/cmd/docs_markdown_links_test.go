@@ -10,6 +10,8 @@ import (
 
 	"google.golang.org/api/docs/v1"
 	"google.golang.org/api/option"
+
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 )
 
 func TestRewriteMarkdownHeadingLinks_RewritesTableCellLinks(t *testing.T) {
@@ -76,7 +78,7 @@ func TestRewriteMarkdownHeadingLinks_RewritesTableCellLinks(t *testing.T) {
 		t.Fatalf("NewDocsService: %v", err)
 	}
 
-	count, err := rewriteMarkdownHeadingLinks(context.Background(), svc, "doc1", "", []markdownExplicitHeadingAnchor{{
+	count, err := rewriteMarkdownHeadingLinks(context.Background(), svc, "doc1", "", []docsmarkdown.ExplicitHeadingAnchor{{
 		Anchor:     "attachments",
 		Text:       "Files",
 		Occurrence: 1,
@@ -167,7 +169,7 @@ func TestRewriteMarkdownHeadingLinks_MatchesExplicitAnchorByHeadingText(t *testi
 		t.Fatalf("NewDocsService: %v", err)
 	}
 
-	count, err := rewriteMarkdownHeadingLinks(context.Background(), svc, "doc1", "", []markdownExplicitHeadingAnchor{{
+	count, err := rewriteMarkdownHeadingLinks(context.Background(), svc, "doc1", "", []docsmarkdown.ExplicitHeadingAnchor{{
 		Anchor:     "attachments",
 		Text:       "Files",
 		Occurrence: 1,
@@ -252,7 +254,7 @@ func TestRewriteMarkdownHeadingLinks_ExplicitAnchorReservesAutoSlug(t *testing.T
 		t.Fatalf("NewDocsService: %v", err)
 	}
 
-	count, err := rewriteMarkdownHeadingLinks(context.Background(), svc, "doc1", "", []markdownExplicitHeadingAnchor{{
+	count, err := rewriteMarkdownHeadingLinks(context.Background(), svc, "doc1", "", []docsmarkdown.ExplicitHeadingAnchor{{
 		Anchor:     "files",
 		Text:       "Files",
 		Occurrence: 1,
@@ -332,7 +334,7 @@ func TestRewriteMarkdownHeadingLinksFromIndex_RewritesLinkInExistingParagraphTai
 		t.Fatalf("NewDocsService: %v", err)
 	}
 
-	count, err := rewriteMarkdownHeadingLinksFromIndex(context.Background(), svc, "doc1", "", []markdownExplicitHeadingAnchor{{
+	count, err := rewriteMarkdownHeadingLinksFromIndex(context.Background(), svc, "doc1", "", []docsmarkdown.ExplicitHeadingAnchor{{
 		Anchor:     "attachments",
 		Text:       "Files",
 		Occurrence: 1,
@@ -423,7 +425,7 @@ func TestRewriteMarkdownHeadingLinksInRange_SkipsLaterExistingLinks(t *testing.T
 		t.Fatalf("NewDocsService: %v", err)
 	}
 
-	count, err := rewriteMarkdownHeadingLinksInRange(context.Background(), svc, "doc1", "", []markdownExplicitHeadingAnchor{{
+	count, err := rewriteMarkdownHeadingLinksInRange(context.Background(), svc, "doc1", "", []docsmarkdown.ExplicitHeadingAnchor{{
 		Anchor:     "attachments",
 		Text:       "Files",
 		Occurrence: 1,

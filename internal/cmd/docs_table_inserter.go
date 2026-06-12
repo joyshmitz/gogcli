@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"google.golang.org/api/docs/v1"
+
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 )
 
 // TableInserter handles multi-step table insertion for native Google Docs tables
@@ -146,7 +148,7 @@ func buildTableCellRequests(cellContent string, cellIdx int64, isHeaderRow bool,
 	var formatRequests []*docs.Request
 	var text string
 	var insertedLen int64
-	if isTableSeparator("|" + trimmed + "|") {
+	if docsmarkdown.IsTableSeparator("|" + trimmed + "|") {
 		text = trimmed
 		insertedLen = utf16Len(trimmed)
 	} else {

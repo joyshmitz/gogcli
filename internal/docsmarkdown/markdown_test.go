@@ -1,4 +1,4 @@
-package cmd
+package docsmarkdown
 
 import (
 	"reflect"
@@ -65,6 +65,7 @@ func TestParseMarkdown(t *testing.T) {
 				t.Errorf("ParseMarkdown() got %d elements, want %d", len(result), len(tt.expected))
 				return
 			}
+
 			for i, el := range result {
 				if el.Type != tt.expected[i] {
 					t.Errorf("ParseMarkdown()[%d] = %v, want %v", i, el.Type, tt.expected[i])
@@ -79,9 +80,11 @@ func TestParseMarkdown_ExplicitHeadingAnchor(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("ParseMarkdown() got %d elements, want 3: %#v", len(got), got)
 	}
+
 	if got[0].Content != "Files {#attachments}" || got[0].Anchor != "attachments" {
 		t.Fatalf("heading = content %q anchor %q, want unstripped content/attachments", got[0].Content, got[0].Anchor)
 	}
+
 	if got[2].Content != "# Keep {#literal}" {
 		t.Fatalf("code block anchor marker should stay literal, got %q", got[2].Content)
 	}
@@ -92,14 +95,16 @@ func TestParseMarkdown_ExplicitHeadingAnchorPandocIDs(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("ParseMarkdown() got %d elements, want 3: %#v", len(got), got)
 	}
+
 	want := []string{"_toc", "über", "-api"}
 	for i, anchor := range want {
 		if got[i].Anchor != anchor {
 			t.Fatalf("heading %d anchor = %q, want %q", i, got[i].Anchor, anchor)
 		}
 	}
-	if stripped := stripMarkdownHeadingAnchors("# API {#_toc}\n## Unicode {#über}\n### Dash {#-api}\n"); stripped != "# API\n## Unicode\n### Dash\n" {
-		t.Fatalf("stripMarkdownHeadingAnchors() = %q", stripped)
+
+	if stripped := StripHeadingAnchors("# API {#_toc}\n## Unicode {#über}\n### Dash {#-api}\n"); stripped != "# API\n## Unicode\n### Dash\n" {
+		t.Fatalf("StripHeadingAnchors() = %q", stripped)
 	}
 }
 
@@ -108,9 +113,11 @@ func TestParseMarkdown_ExplicitHeadingAnchorInsideTildeFence(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("ParseMarkdown() got %d elements, want 3: %#v", len(got), got)
 	}
+
 	if got[0].Type != MDCodeBlock || got[0].Content != "# Keep {#literal}" {
 		t.Fatalf("code block = %#v, want literal anchor marker", got[0])
 	}
+
 	if got[2].Content != "Files {#attachments}" || got[2].Anchor != "attachments" {
 		t.Fatalf("heading = content %q anchor %q, want unstripped content/attachments", got[2].Content, got[2].Anchor)
 	}
@@ -121,6 +128,7 @@ func TestParseMarkdown_UnclosedTildeFenceRunsToEOF(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("ParseMarkdown() got %d elements, want 1: %#v", len(got), got)
 	}
+
 	if got[0].Type != MDCodeBlock || got[0].Content != "# Keep {#literal}\nmore" {
 		t.Fatalf("code block = %#v, want unclosed tilde fence content through EOF", got[0])
 	}
@@ -128,17 +136,19 @@ func TestParseMarkdown_UnclosedTildeFenceRunsToEOF(t *testing.T) {
 
 func TestStripMarkdownHeadingAnchors(t *testing.T) {
 	input := "# Files {#attachments}\n   ## Indented {#indented}\nSetext {#setext}\n---\n    code {#literal}\n    ---\n- list {#literal}\n---\n\n```md\n# Keep {#literal}\n```\n~~~md\n# Keep tilde {#literal}\n~~~\n   ```md\n# Keep indented {#literal}\n   ```\n## Other\n"
+
 	want := "# Files\n   ## Indented\nSetext\n---\n    code {#literal}\n    ---\n- list {#literal}\n---\n\n```md\n# Keep {#literal}\n```\n~~~md\n# Keep tilde {#literal}\n~~~\n   ```md\n# Keep indented {#literal}\n   ```\n## Other\n"
-	if got := stripMarkdownHeadingAnchors(input); got != want {
-		t.Fatalf("stripMarkdownHeadingAnchors() = %q, want %q", got, want)
+	if got := StripHeadingAnchors(input); got != want {
+		t.Fatalf("StripHeadingAnchors() = %q, want %q", got, want)
 	}
 }
 
 func TestMarkdownImportExplicitHeadingAnchors_CountsDriveHeadings(t *testing.T) {
-	got := markdownImportExplicitHeadingAnchors("Files\n---\n\n   ## Files {#attachments}\n")
+	got := ImportExplicitHeadingAnchors("Files\n---\n\n   ## Files {#attachments}\n")
 	if len(got) != 1 {
-		t.Fatalf("markdownImportExplicitHeadingAnchors() got %d anchors, want 1: %#v", len(got), got)
+		t.Fatalf("ImportExplicitHeadingAnchors() got %d anchors, want 1: %#v", len(got), got)
 	}
+
 	if got[0].Anchor != "attachments" || got[0].Text != "Files" || got[0].Occurrence != 2 {
 		t.Fatalf("anchor = %#v, want attachments/Files occurrence 2", got[0])
 	}
@@ -201,6 +211,7 @@ func TestParseMarkdown_IndentedListMarkerWithoutParent(t *testing.T) {
 	if len(result) != 1 {
 		t.Fatalf("ParseMarkdown() got %d elements, want 1: %#v", len(result), result)
 	}
+
 	got := result[0]
 	if got.Type != MDParagraph || got.Content != "    - keep literal" {
 		t.Fatalf("element = {type:%v content:%q}, want paragraph with literal text", got.Type, got.Content)
@@ -278,6 +289,7 @@ func TestParseInlineFormatting(t *testing.T) {
 			if text != tt.expectedText {
 				t.Errorf("ParseInlineFormatting() text = %q, want %q", text, tt.expectedText)
 			}
+
 			if len(styles) != tt.expectedCount {
 				t.Errorf("ParseInlineFormatting() got %d styles, want %d", len(styles), tt.expectedCount)
 			}
@@ -311,9 +323,11 @@ func TestParseInlineFormatting_LongTildeRunsAreLiteral(t *testing.T) {
 	if text != "ok and ~~~not~~~ and ~~~~also not~~~~" {
 		t.Fatalf("text = %q", text)
 	}
+
 	if len(styles) != 1 {
 		t.Fatalf("expected only the exact two-tilde span to format, got %#v", styles)
 	}
+
 	assertInlineStrikethrough(t, text, styles, "ok")
 }
 
@@ -335,6 +349,7 @@ func TestParseInlineFormatting_PreservesAdjacentLiteralBackticks(t *testing.T) {
 		if text != input {
 			t.Fatalf("ParseInlineFormatting(%q) text = %q", input, text)
 		}
+
 		if len(styles) != 0 {
 			t.Fatalf("ParseInlineFormatting(%q) styles = %#v", input, styles)
 		}
@@ -344,6 +359,7 @@ func TestParseInlineFormatting_PreservesAdjacentLiteralBackticks(t *testing.T) {
 	if text != "code" {
 		t.Fatalf("text = %q", text)
 	}
+
 	assertInlineStyle(t, text, styles, "code", false, false, true)
 }
 
@@ -396,6 +412,7 @@ func TestParseInlineFormatting_UnderscoreWhitespaceIsLiteral(t *testing.T) {
 	if text != "before _ foo _ after and a _ b _ c" {
 		t.Fatalf("text = %q", text)
 	}
+
 	if len(styles) != 0 {
 		t.Fatalf("styles = %#v", styles)
 	}
@@ -412,13 +429,16 @@ func TestParseInlineFormatting_LiteralBracketBeforeLink(t *testing.T) {
 
 func TestParseMarkdown_StripsReporterBlockMarkers(t *testing.T) {
 	input := "> quoted text\n```go\nfmt.Println(\"hi\")\n```"
+
 	got := ParseMarkdown(input)
 	if len(got) != 2 {
 		t.Fatalf("expected 2 elements, got %d", len(got))
 	}
+
 	if got[0].Type != MDBlockquote || got[0].Content != "quoted text" {
 		t.Fatalf("blockquote = %#v", got[0])
 	}
+
 	if got[1].Type != MDCodeBlock || got[1].Content != "fmt.Println(\"hi\")" {
 		t.Fatalf("code block = %#v", got[1])
 	}
@@ -426,40 +446,49 @@ func TestParseMarkdown_StripsReporterBlockMarkers(t *testing.T) {
 
 func assertInlineStyle(t *testing.T, text string, styles []TextStyle, wantText string, bold, italic, code bool) {
 	t.Helper()
+
 	for _, style := range styles {
 		if int(style.End) > len(text) {
 			continue
 		}
+
 		if text[style.Start:style.End] == wantText && style.Bold == bold && style.Italic == italic && style.Code == code && !style.Strikethrough {
 			return
 		}
 	}
+
 	t.Fatalf("missing style text=%q bold=%v italic=%v code=%v in %#v", wantText, bold, italic, code, styles)
 }
 
 func assertInlineStrikethrough(t *testing.T, text string, styles []TextStyle, wantText string) {
 	t.Helper()
+
 	for _, style := range styles {
 		if int(style.End) > len(text) {
 			continue
 		}
+
 		if text[style.Start:style.End] == wantText && style.Strikethrough {
 			return
 		}
 	}
+
 	t.Fatalf("missing strikethrough text=%q in %#v", wantText, styles)
 }
 
 func assertInlineLink(t *testing.T, text string, styles []TextStyle, wantText string, wantURL string) {
 	t.Helper()
+
 	for _, style := range styles {
 		if int(style.End) > len(text) {
 			continue
 		}
+
 		if text[style.Start:style.End] == wantText && style.Link == wantURL {
 			return
 		}
 	}
+
 	t.Fatalf("missing link text=%q url=%q in %#v", wantText, wantURL, styles)
 }
 
@@ -483,6 +512,7 @@ func TestParseHeading(t *testing.T) {
 		if level != tt.expectedLevel {
 			t.Errorf("parseHeading(%q) level = %d, want %d", tt.line, level, tt.expectedLevel)
 		}
+
 		if content != tt.expectedContent {
 			t.Errorf("parseHeading(%q) content = %q, want %q", tt.line, content, tt.expectedContent)
 		}
@@ -514,13 +544,16 @@ func TestIsHorizontalRule(t *testing.T) {
 
 func TestParseMarkdown_TableDoesNotSkipFollowingLine(t *testing.T) {
 	input := "| Name | Value |\n| --- | --- |\n| a | b |\nAfter table"
+
 	got := ParseMarkdown(input)
 	if len(got) != 2 {
 		t.Fatalf("expected 2 elements, got %d", len(got))
 	}
+
 	if got[0].Type != MDTable {
 		t.Fatalf("first element type = %v, want %v", got[0].Type, MDTable)
 	}
+
 	if got[1].Type != MDParagraph || got[1].Content != "After table" {
 		t.Fatalf("second element = %#v, want paragraph 'After table'", got[1])
 	}
@@ -528,10 +561,12 @@ func TestParseMarkdown_TableDoesNotSkipFollowingLine(t *testing.T) {
 
 func TestParseMarkdown_TableNormalizesHTMLBreaksInCells(t *testing.T) {
 	input := "| Name | Notes |\n| --- | --- |\n| Alice<br>Bob<BR/>Carol<Br / >Dana | Keep <break> literal |"
+
 	got := ParseMarkdown(input)
 	if len(got) != 1 || got[0].Type != MDTable {
 		t.Fatalf("ParseMarkdown() = %#v, want one table", got)
 	}
+
 	want := []string{"Alice\nBob\nCarol\nDana", "Keep <break> literal"}
 	if rows := got[0].TableCells; len(rows) != 2 || len(rows[1]) != 2 || rows[1][0] != want[0] || rows[1][1] != want[1] {
 		t.Fatalf("table rows = %#v, want second row %#v", rows, want)
@@ -540,10 +575,12 @@ func TestParseMarkdown_TableNormalizesHTMLBreaksInCells(t *testing.T) {
 
 func TestParseMarkdown_TableBreaksPreserveProtectedLiterals(t *testing.T) {
 	input := "| Code | Escaped |\n| --- | --- |\n| `<br>` and ``<BR/>`` | \\<br> and \\<br/> |"
+
 	got := ParseMarkdown(input)
 	if len(got) != 1 || got[0].Type != MDTable {
 		t.Fatalf("ParseMarkdown() = %#v, want one table", got)
 	}
+
 	want := []string{"`<br>` and ``<BR/>``", "\\<br> and \\<br/>"}
 	if rows := got[0].TableCells; len(rows) != 2 || len(rows[1]) != 2 || rows[1][0] != want[0] || rows[1][1] != want[1] {
 		t.Fatalf("table rows = %#v, want second row %#v", rows, want)
@@ -579,8 +616,8 @@ func TestIsTableSeparator_EmptyPipeRowRejected(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isTableSeparator(tt.line); got != tt.want {
-				t.Errorf("isTableSeparator(%q) = %v, want %v", tt.line, got, tt.want)
+			if got := IsTableSeparator(tt.line); got != tt.want {
+				t.Errorf("IsTableSeparator(%q) = %v, want %v", tt.line, got, tt.want)
 			}
 		})
 	}
@@ -588,10 +625,12 @@ func TestIsTableSeparator_EmptyPipeRowRejected(t *testing.T) {
 
 func TestParseMarkdown_OneColumnTable(t *testing.T) {
 	input := "| Status |\n| --- |\n| Ready |"
+
 	got := ParseMarkdown(input)
 	if len(got) != 1 || got[0].Type != MDTable {
 		t.Fatalf("ParseMarkdown() = %#v, want one table", got)
 	}
+
 	want := [][]string{{"Status"}, {"Ready"}}
 	if !reflect.DeepEqual(got[0].TableCells, want) {
 		t.Fatalf("table rows = %#v, want %#v", got[0].TableCells, want)
@@ -600,10 +639,12 @@ func TestParseMarkdown_OneColumnTable(t *testing.T) {
 
 func TestParseMarkdown_OneColumnDashOnlyDataRow(t *testing.T) {
 	input := "| Status |\n| --- |\n| --- |"
+
 	got := ParseMarkdown(input)
 	if len(got) != 1 || got[0].Type != MDTable {
 		t.Fatalf("ParseMarkdown() = %#v, want one table", got)
 	}
+
 	want := [][]string{{"Status"}, {"---"}}
 	if !reflect.DeepEqual(got[0].TableCells, want) {
 		t.Fatalf("table rows = %#v, want %#v", got[0].TableCells, want)
@@ -612,10 +653,12 @@ func TestParseMarkdown_OneColumnDashOnlyDataRow(t *testing.T) {
 
 func TestParseMarkdown_MultiColumnDashOnlyDataRow(t *testing.T) {
 	input := "| Left | Right |\n| --- | --- |\n| --- | :---: |"
+
 	got := ParseMarkdown(input)
 	if len(got) != 1 || got[0].Type != MDTable {
 		t.Fatalf("ParseMarkdown() = %#v, want one table", got)
 	}
+
 	want := [][]string{{"Left", "Right"}, {"---", ":---:"}}
 	if !reflect.DeepEqual(got[0].TableCells, want) {
 		t.Fatalf("table rows = %#v, want %#v", got[0].TableCells, want)
@@ -628,20 +671,25 @@ func TestParseMarkdown_EmptyHeaderTableDropsBlankHeaderAndKeepsDataRows(t *testi
 	// matched isTableSeparator and the outer loop advanced too far). Regression
 	// for #632: the blank header itself should not render as a visible row.
 	input := "|     |     |\n|-----|-----|\n| Label A | Value A |\n| Label B | Value B |"
+
 	got := ParseMarkdown(input)
 	if len(got) != 1 {
 		t.Fatalf("expected 1 element (table only), got %d: %#v", len(got), got)
 	}
+
 	if got[0].Type != MDTable {
 		t.Fatalf("element type = %v, want MDTable", got[0].Type)
 	}
+
 	if len(got[0].TableCells) != 2 {
 		t.Fatalf("expected 2 data rows, got %d: %#v", len(got[0].TableCells), got[0].TableCells)
 	}
+
 	first := got[0].TableCells[0]
 	if len(first) != 2 || first[0] != "Label A" || first[1] != "Value A" {
 		t.Fatalf("first row = %#v, want [Label A, Value A]", first)
 	}
+
 	last := got[0].TableCells[1]
 	if len(last) != 2 || last[0] != "Label B" || last[1] != "Value B" {
 		t.Fatalf("last row = %#v, want [Label B, Value B]", last)
@@ -650,7 +698,8 @@ func TestParseMarkdown_EmptyHeaderTableDropsBlankHeaderAndKeepsDataRows(t *testi
 
 func TestNormalizeMarkdownTablesForDriveImport_PromotesFirstDataRow(t *testing.T) {
 	input := "|     |     |\n|-----|-----|\n| Label A | Value A |\n| Label B | Value B |\n\nAfter"
-	got := normalizeMarkdownTablesForDriveImport(input)
+	got := NormalizeTablesForDriveImport(input)
+
 	want := "| Label A | Value A |\n|-----|-----|\n| Label B | Value B |\n\nAfter"
 	if got != want {
 		t.Fatalf("normalized markdown = %q, want %q", got, want)
@@ -671,8 +720,8 @@ func TestMarkdownHasTableCellBreaks(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := markdownHasTableCellBreaks(tt.markdown); got != tt.want {
-				t.Fatalf("markdownHasTableCellBreaks() = %v, want %v", got, tt.want)
+			if got := HasTableCellBreaks(tt.markdown); got != tt.want {
+				t.Fatalf("HasTableCellBreaks() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -680,7 +729,8 @@ func TestMarkdownHasTableCellBreaks(t *testing.T) {
 
 func TestNormalizeMarkdownTablesForDriveImport_SkipsCodeBlocks(t *testing.T) {
 	input := "```\n|     |     |\n|-----|-----|\n| A | B |\n```\n\n    |     |     |\n    |-----|-----|\n    | A | B |\n"
-	got := normalizeMarkdownTablesForDriveImport(input)
+
+	got := NormalizeTablesForDriveImport(input)
 	if got != input {
 		t.Fatalf("code block markdown changed:\n got %q\nwant %q", got, input)
 	}
@@ -688,7 +738,8 @@ func TestNormalizeMarkdownTablesForDriveImport_SkipsCodeBlocks(t *testing.T) {
 
 func TestNormalizeMarkdownTablesForDriveImport_TracksFenceMarker(t *testing.T) {
 	input := "```\n~~~\n|     |     |\n|-----|-----|\n| A | B |\n```\n"
-	got := normalizeMarkdownTablesForDriveImport(input)
+
+	got := NormalizeTablesForDriveImport(input)
 	if got != input {
 		t.Fatalf("mixed-fence code block changed:\n got %q\nwant %q", got, input)
 	}

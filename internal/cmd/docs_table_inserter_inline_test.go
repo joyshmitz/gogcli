@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"google.golang.org/api/docs/v1"
+
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 )
 
 // Regression for #608: inline markdown markers inside table cells previously
@@ -87,7 +89,7 @@ func TestBuildTableCellRequests_AppliesInlineItalicAndCode(t *testing.T) {
 }
 
 func TestBuildTableCellRequests_TableBreaksPreserveInlineStyleRanges(t *testing.T) {
-	rows := parseTableRow("| Alice<br>**Bob** and `<br>` |")
+	rows := docsmarkdown.ParseTableRow("| Alice<br>**Bob** and `<br>` |")
 	if len(rows) != 1 {
 		t.Fatalf("parseTableRow() = %#v, want one cell", rows)
 	}
@@ -214,7 +216,7 @@ func TestBuildTableCellRequests_EmptyAfterStrippingReturnsNothing(t *testing.T) 
 }
 
 func TestBuildTableCellRequests_PreservesNestedMarkdownLists(t *testing.T) {
-	rows := parseTableRow("| nested | - a<br>  - a1<br>  - a2<br>- b |")
+	rows := docsmarkdown.ParseTableRow("| nested | - a<br>  - a1<br>  - a2<br>- b |")
 	if len(rows) != 2 {
 		t.Fatalf("parseTableRow() = %#v, want two cells", rows)
 	}

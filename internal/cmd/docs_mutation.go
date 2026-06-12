@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"google.golang.org/api/docs/v1"
+
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 )
 
 // docsBatchUpdateRequestCap is the Docs API hard limit on the number of
@@ -125,9 +127,9 @@ func replaceDocsTextRange(ctx context.Context, svc *docs.Service, doc *docs.Docu
 
 func replaceDocsMarkdownRange(ctx context.Context, svc *docs.Service, doc *docs.Document, startIdx, endIdx int64, replaceText string, tabID string) (requestCount int, inserted int, err error) {
 	cleaned, images := extractMarkdownImages(replaceText)
-	explicitHeadingAnchors := markdownExplicitHeadingAnchors(cleaned)
-	elements := ParseMarkdown(cleaned)
-	stripMarkdownElementHeadingAnchors(elements)
+	explicitHeadingAnchors := docsmarkdown.ExplicitHeadingAnchors(cleaned)
+	elements := docsmarkdown.ParseMarkdown(cleaned)
+	docsmarkdown.StripElementHeadingAnchors(elements)
 	prefix := ""
 	baseIndex := startIdx
 	if markdownReplaceNeedsParagraphBoundary(doc, startIdx, tabID, elements) {
@@ -211,10 +213,10 @@ func replaceDocsMarkdownRange(ctx context.Context, svc *docs.Service, doc *docs.
 	return requestCount, len(prefix) + len(textToInsert), nil
 }
 
-func markdownRangeReplacementIsInline(markdown string, elements []MarkdownElement) bool {
+func markdownRangeReplacementIsInline(markdown string, elements []docsmarkdown.MarkdownElement) bool {
 	return !strings.HasSuffix(markdown, "\n") &&
 		len(elements) == 1 &&
-		elements[0].Type == MDParagraph
+		elements[0].Type == docsmarkdown.MDParagraph
 }
 
 func resetDocsParagraphRequests(startIdx, endIdx int64, tabID string) []*docs.Request {
@@ -239,7 +241,7 @@ func resetDocsParagraphRequests(startIdx, endIdx int64, tabID string) []*docs.Re
 	}
 }
 
-func markdownReplaceNeedsParagraphBoundary(doc *docs.Document, startIdx int64, tabID string, elements []MarkdownElement) bool {
+func markdownReplaceNeedsParagraphBoundary(doc *docs.Document, startIdx int64, tabID string, elements []docsmarkdown.MarkdownElement) bool {
 	return markdownAppendNeedsParagraphBoundary(elements) && !docRangeStartsParagraph(doc, startIdx, tabID)
 }
 
@@ -254,9 +256,9 @@ func insertDocsMarkdownAtWithOptions(ctx context.Context, svc *docs.Service, doc
 
 func insertDocsMarkdownAtWithOptionsAndEnd(ctx context.Context, svc *docs.Service, docID string, insertIdx int64, content string, tabID string, stripHeadingAnchors bool) (requestCount int, inserted int, endIndex int64, err error) {
 	cleaned, images := extractMarkdownImages(content)
-	elements := ParseMarkdown(cleaned)
+	elements := docsmarkdown.ParseMarkdown(cleaned)
 	if stripHeadingAnchors {
-		stripMarkdownElementHeadingAnchors(elements)
+		docsmarkdown.StripElementHeadingAnchors(elements)
 	}
 	prefix := ""
 	baseIndex := insertIdx
@@ -434,12 +436,12 @@ func docsBatchResponseRevisionID(resp *docs.BatchUpdateDocumentResponse) string 
 	return resp.WriteControl.RequiredRevisionId
 }
 
-func markdownAppendNeedsParagraphBoundary(elements []MarkdownElement) bool {
+func markdownAppendNeedsParagraphBoundary(elements []docsmarkdown.MarkdownElement) bool {
 	if len(elements) == 0 {
 		return false
 	}
 	switch elements[0].Type {
-	case MDEmptyLine, MDParagraph:
+	case docsmarkdown.MDEmptyLine, docsmarkdown.MDParagraph:
 		return false
 	default:
 		return true

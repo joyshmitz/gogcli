@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"google.golang.org/api/docs/v1"
+
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 )
 
 func TestMarkdownToDocsRequests_BaseIndex(t *testing.T) {
-	elements := []MarkdownElement{{Type: MDParagraph, Content: "**bold**"}}
+	elements := []docsmarkdown.MarkdownElement{{Type: docsmarkdown.MDParagraph, Content: "**bold**"}}
 	requests, text, tables := MarkdownToDocsRequests(elements, 42, "")
 
 	if text != "bold\n" {
@@ -28,9 +30,9 @@ func TestMarkdownToDocsRequests_BaseIndex(t *testing.T) {
 }
 
 func TestMarkdownToDocsRequests_TableStartIndexUsesBase(t *testing.T) {
-	elements := []MarkdownElement{
-		{Type: MDParagraph, Content: "A"},
-		{Type: MDTable, TableCells: [][]string{{"h1", "h2"}, {"v1", "v2"}}},
+	elements := []docsmarkdown.MarkdownElement{
+		{Type: docsmarkdown.MDParagraph, Content: "A"},
+		{Type: docsmarkdown.MDTable, TableCells: [][]string{{"h1", "h2"}, {"v1", "v2"}}},
 	}
 	_, text, tables := MarkdownToDocsRequests(elements, 10, "")
 
@@ -46,7 +48,7 @@ func TestMarkdownToDocsRequests_TableStartIndexUsesBase(t *testing.T) {
 }
 
 func TestMarkdownToDocsRequests_TableConsumesAdjacentBlankLines(t *testing.T) {
-	elements := ParseMarkdown(strings.Join([]string{
+	elements := docsmarkdown.ParseMarkdown(strings.Join([]string{
 		"# Title",
 		"",
 		"| col-a | col-b |",
@@ -73,7 +75,7 @@ func TestMarkdownToDocsRequests_TableConsumesAdjacentBlankLines(t *testing.T) {
 }
 
 func TestMarkdownToDocsRequests_PreservesNonTableBlankLines(t *testing.T) {
-	_, text, tables := MarkdownToDocsRequests(ParseMarkdown("First\n\nSecond"), 1, "")
+	_, text, tables := MarkdownToDocsRequests(docsmarkdown.ParseMarkdown("First\n\nSecond"), 1, "")
 	if text != "First\n\nSecond\n" {
 		t.Fatalf("text = %q, want preserved body paragraph gap", text)
 	}
@@ -95,7 +97,7 @@ func TestMarkdownToDocsRequests_ConsumesHeadingAdjacentBlankLines(t *testing.T) 
 		"Paragraph three.",
 	}, "\n")
 
-	_, text, tables := MarkdownToDocsRequests(ParseMarkdown(markdown), 1, "")
+	_, text, tables := MarkdownToDocsRequests(docsmarkdown.ParseMarkdown(markdown), 1, "")
 
 	wantText := "Section A\nParagraph one.\n\nParagraph two.\nSection B\nParagraph three.\n"
 	if text != wantText {
@@ -107,7 +109,7 @@ func TestMarkdownToDocsRequests_ConsumesHeadingAdjacentBlankLines(t *testing.T) 
 }
 
 func TestMarkdownToDocsRequests_Strikethrough(t *testing.T) {
-	elements := []MarkdownElement{{Type: MDParagraph, Content: "~~struck out~~ vs **bold**"}}
+	elements := []docsmarkdown.MarkdownElement{{Type: docsmarkdown.MDParagraph, Content: "~~struck out~~ vs **bold**"}}
 	requests, text, tables := MarkdownToDocsRequests(elements, 10, "t.second")
 
 	if text != "struck out vs bold\n" {
@@ -139,8 +141,8 @@ func TestMarkdownToDocsRequests_Strikethrough(t *testing.T) {
 }
 
 func TestMarkdownToDocsRequests_StripsExplicitHeadingAnchor(t *testing.T) {
-	elements := ParseMarkdown("## Files {#attachments}\n")
-	stripMarkdownElementHeadingAnchors(elements)
+	elements := docsmarkdown.ParseMarkdown("## Files {#attachments}\n")
+	docsmarkdown.StripElementHeadingAnchors(elements)
 	requests, text, tables := MarkdownToDocsRequests(elements, 5, "t.second")
 	if text != "Files\n" {
 		t.Fatalf("text = %q, want %q", text, "Files\n")
@@ -157,7 +159,7 @@ func TestMarkdownToDocsRequests_StripsExplicitHeadingAnchor(t *testing.T) {
 }
 
 func TestMarkdownToDocsRequests_KeepsExplicitHeadingAnchorWithoutOptIn(t *testing.T) {
-	_, text, tables := MarkdownToDocsRequests(ParseMarkdown("## Files {#attachments}\n"), 5, "")
+	_, text, tables := MarkdownToDocsRequests(docsmarkdown.ParseMarkdown("## Files {#attachments}\n"), 5, "")
 	if text != "Files {#attachments}\n" {
 		t.Fatalf("text = %q, want explicit anchor preserved", text)
 	}
@@ -167,7 +169,7 @@ func TestMarkdownToDocsRequests_KeepsExplicitHeadingAnchorWithoutOptIn(t *testin
 }
 
 func TestMarkdownToDocsRequests_NestedLists(t *testing.T) {
-	elements := ParseMarkdown("- Parent\n  - **Child**\n    - Grandchild\n\n1. One\n  1. Nested one")
+	elements := docsmarkdown.ParseMarkdown("- Parent\n  - **Child**\n    - Grandchild\n\n1. One\n  1. Nested one")
 	requests, text, tables := MarkdownToDocsRequests(elements, 10, "t.second")
 
 	wantText := "Parent\n\tChild\n\t\tGrandchild\n\nOne\n\tNested one\n"
@@ -219,7 +221,7 @@ func TestMarkdownToDocsRequests_NestedLists(t *testing.T) {
 }
 
 func TestMarkdownToDocsRequests_MixedListChildrenStayNested(t *testing.T) {
-	elements := ParseMarkdown("1. Parent\n  - Bullet child\n  1. Number child\n2. Sibling")
+	elements := docsmarkdown.ParseMarkdown("1. Parent\n  - Bullet child\n  1. Number child\n2. Sibling")
 	requests, text, tables := MarkdownToDocsRequests(elements, 1, "t.second")
 
 	wantText := "Parent\n\tBullet child\n\tNumber child\nSibling\n"
@@ -282,7 +284,7 @@ func TestMarkdownToDocsRequests_AppendBulletsAndCode(t *testing.T) {
 		"```",
 	}, "\n")
 
-	elements := ParseMarkdown(input)
+	elements := docsmarkdown.ParseMarkdown(input)
 	requests, text, _ := MarkdownToDocsRequests(elements, 1, "")
 
 	// The plain text fed to InsertText must NOT contain the literal "• "

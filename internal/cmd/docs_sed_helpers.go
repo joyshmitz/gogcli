@@ -134,6 +134,8 @@ type sedOutputKV struct {
 	Value any
 }
 
+const inlineTypeCode = "code"
+
 // sedOutputOK writes the standard sed output (status=ok, docId, plus extra key-value pairs).
 // Keys are output in the order provided.
 func sedOutputOK(ctx context.Context, u *ui.UI, id string, extra ...sedOutputKV) error {

@@ -12,6 +12,7 @@ import (
 	"google.golang.org/api/drive/v3"
 	gapi "google.golang.org/api/googleapi"
 
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -281,12 +282,12 @@ func (c *DocsWriteCmd) writeMarkdown(ctx context.Context, flags *RootFlags, docI
 	}
 
 	cleaned, images := extractMarkdownImages(content)
-	if markdownHasTableCellBreaks(cleaned) {
+	if docsmarkdown.HasTableCellBreaks(cleaned) {
 		return c.replaceMarkdownInTab(ctx, flags, docID, content)
 	}
-	cleaned = normalizeMarkdownTablesForDriveImport(cleaned)
-	explicitHeadingAnchors := markdownImportExplicitHeadingAnchors(cleaned)
-	cleaned = stripMarkdownHeadingAnchors(cleaned)
+	cleaned = docsmarkdown.NormalizeTablesForDriveImport(cleaned)
+	explicitHeadingAnchors := docsmarkdown.ImportExplicitHeadingAnchors(cleaned)
+	cleaned = docsmarkdown.StripHeadingAnchors(cleaned)
 	dryRunPayload := map[string]any{
 		"document_id":   docID,
 		"written":       len(content),
@@ -395,7 +396,7 @@ func (c *DocsWriteCmd) writeMarkdown(ctx context.Context, flags *RootFlags, docI
 
 func (c *DocsWriteCmd) appendMarkdown(ctx context.Context, flags *RootFlags, docID, content string) error {
 	cleaned, images := extractMarkdownImages(content)
-	explicitHeadingAnchors := markdownExplicitHeadingAnchors(cleaned)
+	explicitHeadingAnchors := docsmarkdown.ExplicitHeadingAnchors(cleaned)
 	dryRunPayload := map[string]any{
 		"document_id": docID,
 		"written":     len(cleaned),
@@ -425,7 +426,7 @@ func (c *DocsWriteCmd) appendMarkdown(ctx context.Context, flags *RootFlags, doc
 	c.Tab = tabID
 	insertIndex := docsAppendIndex(endIndex)
 	insertedMarkdownStart := insertIndex
-	appendElements := ParseMarkdown(cleaned)
+	appendElements := docsmarkdown.ParseMarkdown(cleaned)
 	if insertIndex > 1 && markdownAppendNeedsParagraphBoundary(appendElements) {
 		insertedMarkdownStart++
 	}
@@ -493,7 +494,7 @@ func (c *DocsWriteCmd) appendMarkdown(ctx context.Context, flags *RootFlags, doc
 // body content via DeleteContentRange. Other tabs are untouched.
 func (c *DocsWriteCmd) replaceMarkdownInTab(ctx context.Context, flags *RootFlags, docID, content string) error {
 	cleaned, images := extractMarkdownImages(content)
-	explicitHeadingAnchors := markdownExplicitHeadingAnchors(cleaned)
+	explicitHeadingAnchors := docsmarkdown.ExplicitHeadingAnchors(cleaned)
 	dryRunPayload := map[string]any{
 		"document_id":   docID,
 		"written":       len(cleaned),
@@ -730,7 +731,7 @@ func (c *DocsUpdateCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 	if c.Markdown {
 		var inserted int
 		cleaned, _ := extractMarkdownImages(text)
-		explicitHeadingAnchors := markdownExplicitHeadingAnchors(cleaned)
+		explicitHeadingAnchors := docsmarkdown.ExplicitHeadingAnchors(cleaned)
 		if replacing {
 			loadedDoc := anchorDocumentForMarkdownReplace(anchor)
 			if loadedDoc == nil {
@@ -750,8 +751,8 @@ func (c *DocsUpdateCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 			}
 		} else {
 			insertedMarkdownStart := insertIndex
-			insertElements := ParseMarkdown(cleaned)
-			stripMarkdownElementHeadingAnchors(insertElements)
+			insertElements := docsmarkdown.ParseMarkdown(cleaned)
+			docsmarkdown.StripElementHeadingAnchors(insertElements)
 			if insertIndex > 1 && markdownAppendNeedsParagraphBoundary(insertElements) {
 				insertedMarkdownStart++
 			}

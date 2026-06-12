@@ -7,6 +7,8 @@ import (
 	"unicode"
 
 	"google.golang.org/api/docs/v1"
+
+	"github.com/steipete/gogcli/internal/docsmarkdown"
 )
 
 func markdownMayContainHeadingLinks(markdown string) bool {
@@ -29,15 +31,15 @@ type markdownParagraphRef struct {
 	endIndex   int64
 }
 
-func rewriteMarkdownHeadingLinks(ctx context.Context, svc *docs.Service, docID string, tabID string, explicitAnchors []markdownExplicitHeadingAnchor) (int, error) {
+func rewriteMarkdownHeadingLinks(ctx context.Context, svc *docs.Service, docID string, tabID string, explicitAnchors []docsmarkdown.ExplicitHeadingAnchor) (int, error) {
 	return rewriteMarkdownHeadingLinksFromIndex(ctx, svc, docID, tabID, explicitAnchors, 0)
 }
 
-func rewriteMarkdownHeadingLinksFromIndex(ctx context.Context, svc *docs.Service, docID string, tabID string, explicitAnchors []markdownExplicitHeadingAnchor, minIndex int64) (int, error) {
+func rewriteMarkdownHeadingLinksFromIndex(ctx context.Context, svc *docs.Service, docID string, tabID string, explicitAnchors []docsmarkdown.ExplicitHeadingAnchor, minIndex int64) (int, error) {
 	return rewriteMarkdownHeadingLinksInRange(ctx, svc, docID, tabID, explicitAnchors, minIndex, 0)
 }
 
-func rewriteMarkdownHeadingLinksInRange(ctx context.Context, svc *docs.Service, docID string, tabID string, explicitAnchors []markdownExplicitHeadingAnchor, minIndex int64, maxIndex int64) (int, error) {
+func rewriteMarkdownHeadingLinksInRange(ctx context.Context, svc *docs.Service, docID string, tabID string, explicitAnchors []docsmarkdown.ExplicitHeadingAnchor, minIndex int64, maxIndex int64) (int, error) {
 	getCall := svc.Documents.Get(docID).Context(ctx)
 	if tabID != "" {
 		getCall = getCall.IncludeTabsContent(true)
@@ -117,14 +119,14 @@ func rewriteMarkdownHeadingLinksInRange(ctx context.Context, svc *docs.Service, 
 	return len(requests), nil
 }
 
-func markdownHeadingLinkTargets(content []*docs.StructuralElement, resolvedTabID string, explicitAnchors []markdownExplicitHeadingAnchor, minIndex int64, maxIndex int64) ([]markdownParagraphRef, map[string]markdownHeadingTarget, map[string]markdownHeadingTarget) {
+func markdownHeadingLinkTargets(content []*docs.StructuralElement, resolvedTabID string, explicitAnchors []docsmarkdown.ExplicitHeadingAnchor, minIndex int64, maxIndex int64) ([]markdownParagraphRef, map[string]markdownHeadingTarget, map[string]markdownHeadingTarget) {
 	paragraphs := markdownParagraphsInContent(content, minIndex)
 	autoHeadingBySlug := map[string]markdownHeadingTarget{}
 	explicitHeadingBySlug := map[string]markdownHeadingTarget{}
 	explicitHeadingByKey := map[markdownHeadingMatchKey]string{}
 	for _, explicit := range explicitAnchors {
 		anchor := strings.TrimSpace(explicit.Anchor)
-		text := markdownHeadingNormalizedText(explicit.Text)
+		text := docsmarkdown.HeadingNormalizedText(explicit.Text)
 		if anchor == "" || text == "" || explicit.Occurrence <= 0 {
 			continue
 		}
@@ -152,7 +154,7 @@ func markdownHeadingLinkTargets(content []*docs.StructuralElement, resolvedTabID
 		}
 		text := markdownHeadingParagraphText(ref.paragraph)
 		target := markdownHeadingTarget{headingID: style.HeadingId, tabID: resolvedTabID}
-		matchText := markdownHeadingNormalizedText(text)
+		matchText := docsmarkdown.HeadingNormalizedText(text)
 		headingTextCounts[matchText]++
 		explicit := explicitHeadingByKey[markdownHeadingMatchKey{
 			text:       matchText,
