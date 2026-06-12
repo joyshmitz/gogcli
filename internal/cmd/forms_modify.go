@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	formsapi "google.golang.org/api/forms/v1"
@@ -409,33 +408,17 @@ type FormsUpdateCmd struct {
 }
 
 func (c *FormsUpdateCmd) Run(ctx context.Context, flags *RootFlags) error {
-	formID := strings.TrimSpace(normalizeGoogleID(c.FormID))
-	if formID == "" {
-		return usage("empty formId")
+	plan, err := newFormsUpdatePlan(formsUpdateInput{
+		FormID:      c.FormID,
+		Title:       c.Title,
+		Description: c.Description,
+		Quiz:        c.IsQuiz,
+	})
+	if err != nil {
+		return err
 	}
 
-	title := strings.TrimSpace(c.Title)
-	description := strings.TrimSpace(c.Description)
-	quiz := strings.TrimSpace(strings.ToLower(c.IsQuiz))
-
-	if title == "" && description == "" && quiz == "" {
-		return usage("at least one of --title, --description, or --quiz is required")
-	}
-	var isQuiz bool
-	if quiz != "" {
-		var parseErr error
-		isQuiz, parseErr = strconv.ParseBool(quiz)
-		if parseErr != nil {
-			return usage("--quiz must be true or false")
-		}
-	}
-
-	if dryRunErr := dryRunExit(ctx, flags, "forms.update", map[string]any{
-		"form_id":     formID,
-		"title":       title,
-		"description": description,
-		"quiz":        quiz,
-	}); dryRunErr != nil {
+	if dryRunErr := dryRunExit(ctx, flags, "forms.update", plan.dryRunPayload()); dryRunErr != nil {
 		return dryRunErr
 	}
 
@@ -448,46 +431,7 @@ func (c *FormsUpdateCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	var requests []*formsapi.Request
-
-	if title != "" || description != "" {
-		info := &formsapi.Info{}
-		var masks []string
-		if title != "" {
-			info.Title = title
-			masks = append(masks, "title")
-		}
-		if description != "" {
-			info.Description = description
-			masks = append(masks, "description")
-		}
-		requests = append(requests, &formsapi.Request{
-			UpdateFormInfo: &formsapi.UpdateFormInfoRequest{
-				Info:       info,
-				UpdateMask: strings.Join(masks, ","),
-			},
-		})
-	}
-
-	if quiz != "" {
-		requests = append(requests, &formsapi.Request{
-			UpdateSettings: &formsapi.UpdateSettingsRequest{
-				Settings: &formsapi.FormSettings{
-					QuizSettings: &formsapi.QuizSettings{
-						IsQuiz: isQuiz,
-					},
-				},
-				UpdateMask: "quizSettings.isQuiz",
-			},
-		})
-	}
-
-	batchReq := &formsapi.BatchUpdateFormRequest{
-		Requests:              requests,
-		IncludeFormInResponse: true,
-	}
-
-	resp, err := svc.Forms.BatchUpdate(formID, batchReq).Context(ctx).Do()
+	resp, err := svc.Forms.BatchUpdate(plan.FormID, plan.Request).Context(ctx).Do()
 	if err != nil {
 		return err
 	}
@@ -495,14 +439,14 @@ func (c *FormsUpdateCmd) Run(ctx context.Context, flags *RootFlags) error {
 	if outfmt.IsJSON(ctx) {
 		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"updated":  true,
-			"form_id":  formID,
+			"form_id":  plan.FormID,
 			"form":     resp.Form,
-			"edit_url": formEditURL(formID),
+			"edit_url": formEditURL(plan.FormID),
 		})
 	}
 
 	u := ui.FromContext(ctx)
 	u.Out().Linef("updated\ttrue")
-	printFormSummary(u, resp.Form, formID)
+	printFormSummary(u, resp.Form, plan.FormID)
 	return nil
 }
