@@ -295,50 +295,26 @@ type ClassroomSubmissionsGradeCmd struct {
 
 func (c *ClassroomSubmissionsGradeCmd) Run(ctx context.Context, flags *RootFlags) error {
 	u := ui.FromContext(ctx)
-	courseID := strings.TrimSpace(c.CourseID)
-	courseworkID := strings.TrimSpace(c.CourseworkID)
-	submissionID := strings.TrimSpace(c.SubmissionID)
-	if courseID == "" {
-		return usage("empty courseId")
-	}
-	if courseworkID == "" {
-		return usage("empty courseworkId")
-	}
-	if submissionID == "" {
-		return usage("empty submissionId")
-	}
-
-	fields := make([]string, 0, 2)
-	sub := &classroom.StudentSubmission{}
-	if strings.TrimSpace(c.Draft) != "" {
-		grade, parseErr := parseFloat(c.Draft)
-		if parseErr != nil {
-			return usage(parseErr.Error())
-		}
-		sub.DraftGrade = grade
-		fields = append(fields, "draftGrade")
-	}
-	if strings.TrimSpace(c.Assigned) != "" {
-		grade, parseErr := parseFloat(c.Assigned)
-		if parseErr != nil {
-			return usage(parseErr.Error())
-		}
-		sub.AssignedGrade = grade
-		fields = append(fields, "assignedGrade")
-	}
-	if len(fields) == 0 {
-		return usage("no grades specified")
-	}
-
-	if err := dryRunExit(ctx, flags, "classroom.submissions.grade", map[string]any{
-		"course_id":     courseID,
-		"coursework_id": courseworkID,
-		"submission_id": submissionID,
-		"update_mask":   updateMask(fields),
-		"update_fields": fields,
-		"submission":    sub,
-	}); err != nil {
+	plan, err := buildClassroomSubmissionGradePlan(classroomSubmissionGradeInput{
+		CourseID:     c.CourseID,
+		CourseworkID: c.CourseworkID,
+		SubmissionID: c.SubmissionID,
+		Draft:        c.Draft,
+		Assigned:     c.Assigned,
+	})
+	if err != nil {
 		return err
+	}
+
+	if dryRunErr := dryRunExit(ctx, flags, "classroom.submissions.grade", map[string]any{
+		"course_id":     plan.CourseID,
+		"coursework_id": plan.CourseworkID,
+		"submission_id": plan.SubmissionID,
+		"update_mask":   plan.UpdateMask,
+		"update_fields": plan.UpdateFields,
+		"submission":    plan.Submission,
+	}); dryRunErr != nil {
+		return dryRunErr
 	}
 
 	account, err := requireAccount(flags)
@@ -351,7 +327,7 @@ func (c *ClassroomSubmissionsGradeCmd) Run(ctx context.Context, flags *RootFlags
 		return wrapClassroomError(err)
 	}
 
-	updated, err := svc.Courses.CourseWork.StudentSubmissions.Patch(courseID, courseworkID, submissionID, sub).UpdateMask(updateMask(fields)).Context(ctx).Do()
+	updated, err := svc.Courses.CourseWork.StudentSubmissions.Patch(plan.CourseID, plan.CourseworkID, plan.SubmissionID, plan.Submission).UpdateMask(plan.UpdateMask).Context(ctx).Do()
 	if err != nil {
 		return wrapClassroomError(err)
 	}
