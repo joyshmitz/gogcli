@@ -87,7 +87,7 @@ func newDefaultRuntime() *app.Runtime {
 			AuthorizeGoogle:         googleauth.Authorize,
 			StartManageServer:       googleauth.StartManageServer,
 			CheckRefreshToken:       googleauth.CheckRefreshToken,
-			EnsureKeychainAccess:    secrets.EnsureKeychainAccess,
+			EnsureKeychainAccess:    secrets.EnsureKeychainAccessContext,
 			FetchAuthorizedIdentity: googleauth.IdentityForRefreshToken,
 			ManualAuthURL:           googleauth.ManualAuthURL,
 		},

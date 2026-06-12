@@ -11,8 +11,6 @@ import (
 	"testing"
 
 	youtube "google.golang.org/api/youtube/v3"
-
-	"github.com/steipete/gogcli/internal/secrets"
 )
 
 func TestYouTubeChannelsListWithAPIKey(t *testing.T) {
@@ -286,14 +284,6 @@ func TestYouTubeSearchWithOAuth(t *testing.T) {
 }
 
 func TestYouTubeSearchWithAutoAccountUsesOAuthService(t *testing.T) {
-	origStore := openSecretsStoreForAccount
-	t.Cleanup(func() {
-		openSecretsStoreForAccount = origStore
-	})
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		return &fakeSecretsStore{defaultAccount: "default@example.com"}, nil
-	}
-
 	var gotAccount string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/youtube/v3/search" {
@@ -314,7 +304,11 @@ func TestYouTubeSearchWithAutoAccountUsesOAuthService(t *testing.T) {
 		},
 		APIKey: unexpectedYouTubeTestService(t, "API key service should not be used when --account auto is configured"),
 	})
-	err := runKong(t, &YouTubeSearchListCmd{}, []string{"auto account query", "--max", "1"}, ctx, &RootFlags{Account: "auto"})
+	flags := rootFlagsWithAuthStore(
+		&RootFlags{Account: "auto"},
+		&fakeSecretsStore{defaultAccount: "default@example.com"},
+	)
+	err := runKong(t, &YouTubeSearchListCmd{}, []string{"auto account query", "--max", "1"}, ctx, flags)
 	if err != nil {
 		t.Fatalf("runKong: %v", err)
 	}
@@ -464,14 +458,6 @@ func TestYouTubeCommentsListWithAccountUsesOAuthService(t *testing.T) {
 }
 
 func TestYouTubeVideosListWithAutoAccountUsesOAuthService(t *testing.T) {
-	origStore := openSecretsStoreForAccount
-	t.Cleanup(func() {
-		openSecretsStoreForAccount = origStore
-	})
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		return &fakeSecretsStore{defaultAccount: "default@example.com"}, nil
-	}
-
 	var gotAccount string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/youtube/v3/videos" {
@@ -489,7 +475,11 @@ func TestYouTubeVideosListWithAutoAccountUsesOAuthService(t *testing.T) {
 		},
 		APIKey: unexpectedYouTubeTestService(t, "API key service should not be used when --account auto is configured"),
 	})
-	err := runKong(t, &YouTubeVideosListCmd{}, []string{"--id", "dQw4w9WgXcQ", "--max", "1"}, ctx, &RootFlags{Account: "auto"})
+	flags := rootFlagsWithAuthStore(
+		&RootFlags{Account: "auto"},
+		&fakeSecretsStore{defaultAccount: "default@example.com"},
+	)
+	err := runKong(t, &YouTubeVideosListCmd{}, []string{"--id", "dQw4w9WgXcQ", "--max", "1"}, ctx, flags)
 	if err != nil {
 		t.Fatalf("runKong: %v", err)
 	}

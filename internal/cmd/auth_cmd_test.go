@@ -114,15 +114,10 @@ func (s *memSecretsStore) SetDefaultAccount(client string, email string) error {
 }
 
 func TestAuthTokens_ExportImportRoundtrip_JSON(t *testing.T) {
-	origOpen := openSecretsStore
-	origKeychain := ensureKeychainAccess
-	t.Cleanup(func() {
-		openSecretsStore = origOpen
-		ensureKeychainAccess = origKeychain
-	})
-
-	ensureKeychainAccess = func() error { return nil }
 	store := newMemSecretsStore()
+	runtime := runtimeWithAuthStore(store)
+	runtime.Auth.EnsureKeychainAccess = func(context.Context) error { return nil }
+	execute := func(args []string) error { return executeWithRuntime(args, runtime) }
 	createdAt := time.Date(2025, 12, 12, 0, 0, 0, 0, time.UTC)
 	if err := store.SetToken(config.DefaultClientName, "A@B.COM", secrets.Token{
 		Services:             []string{"gmail"},
@@ -135,13 +130,11 @@ func TestAuthTokens_ExportImportRoundtrip_JSON(t *testing.T) {
 		t.Fatalf("SetToken: %v", err)
 	}
 
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
-
 	outPath := filepath.Join(t.TempDir(), "token.json")
 
 	stdout := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "auth", "tokens", "export", "a@b.com", "--out", outPath}); err != nil {
+			if err := execute([]string{"--json", "auth", "tokens", "export", "a@b.com", "--out", outPath}); err != nil {
 				t.Fatalf("Execute export: %v", err)
 			}
 		})
@@ -176,7 +169,7 @@ func TestAuthTokens_ExportImportRoundtrip_JSON(t *testing.T) {
 
 	importOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "auth", "tokens", "import", outPath}); err != nil {
+			if err := execute([]string{"--json", "auth", "tokens", "import", outPath}); err != nil {
 				t.Fatalf("Execute import: %v", err)
 			}
 		})
@@ -197,17 +190,14 @@ func TestAuthTokens_ExportImportRoundtrip_JSON(t *testing.T) {
 }
 
 func TestAuthTokensList_FiltersNonTokenKeys(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemSecretsStore()
 	_ = store.SetToken(config.DefaultClientName, "a@b.com", secrets.Token{RefreshToken: "rt"})
 	_ = store.SetToken("org", "c@d.com", secrets.Token{RefreshToken: "rt2"})
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
+	runtime := runtimeWithAuthStore(store)
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"auth", "tokens", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"auth", "tokens", "list"}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
@@ -219,19 +209,14 @@ func TestAuthTokensList_FiltersNonTokenKeys(t *testing.T) {
 }
 
 func TestAuthTokensList_ListsKeysWithoutDecrypting(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
-	openSecretsStore = func() (secrets.Store, error) {
-		return &errorTokenStore{
-			keys: []string{secrets.TokenKey(config.DefaultClientName, "a@b.com")},
-			err:  errors.New("read token: aes.KeyUnwrap(): integrity check failed"),
-		}, nil
-	}
+	runtime := runtimeWithAuthStore(&errorTokenStore{
+		keys: []string{secrets.TokenKey(config.DefaultClientName, "a@b.com")},
+		err:  errors.New("read token: aes.KeyUnwrap(): integrity check failed"),
+	})
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"auth", "tokens", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"auth", "tokens", "list"}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
@@ -338,24 +323,19 @@ func (s *errorTokenStore) GetDefaultAccount(string) (string, error) { return "",
 func (s *errorTokenStore) SetDefaultAccount(string, string) error { return nil }
 
 func TestAuthDoctor_JSON_ClassifiesFileKeyringIntegrity(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("GOG_KEYRING_BACKEND", "file")
 	t.Setenv("GOG_KEYRING_PASSWORD", "pw")
 
-	openSecretsStore = func() (secrets.Store, error) {
-		return &errorTokenStore{
-			keys: []string{secrets.TokenKey(config.DefaultClientName, "a@b.com")},
-			err:  errors.New("read token: aes.KeyUnwrap(): integrity check failed"),
-		}, nil
-	}
+	runtime := runtimeWithAuthStore(&errorTokenStore{
+		keys: []string{secrets.TokenKey(config.DefaultClientName, "a@b.com")},
+		err:  errors.New("read token: aes.KeyUnwrap(): integrity check failed"),
+	})
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "auth", "doctor"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "auth", "doctor"}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
@@ -387,22 +367,17 @@ func TestAuthDoctor_JSON_ClassifiesFileKeyringIntegrity(t *testing.T) {
 }
 
 func TestAuthList_JSON_ReportsUnreadableToken(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	openSecretsStore = func() (secrets.Store, error) {
-		return &errorTokenStore{
-			keys: []string{secrets.TokenKey(config.DefaultClientName, "a@b.com")},
-			err:  errors.New("read token: aes.KeyUnwrap(): integrity check failed"),
-		}, nil
-	}
+	runtime := runtimeWithAuthStore(&errorTokenStore{
+		keys: []string{secrets.TokenKey(config.DefaultClientName, "a@b.com")},
+		err:  errors.New("read token: aes.KeyUnwrap(): integrity check failed"),
+	})
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "auth", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "auth", "list"}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
@@ -433,9 +408,6 @@ func TestAuthList_JSON_ReportsUnreadableToken(t *testing.T) {
 }
 
 func TestAuthDoctor_JSON_CheckClassifiesInvalidRAPT(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("GOG_KEYRING_BACKEND", "keychain")
@@ -447,9 +419,9 @@ func TestAuthDoctor_JSON_CheckClassifiesInvalidRAPT(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("SetToken: %v", err)
 	}
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
 	result := executeWithTestRuntime(t, []string{"--json", "auth", "doctor", "--check"}, &app.Runtime{
 		Auth: app.AuthOperations{
+			OpenSecretsStore: func() (secrets.Store, error) { return store, nil },
 			CheckRefreshToken: func(context.Context, string, string, []string, time.Duration) error {
 				return errors.New(`oauth2: "invalid_grant" "reauth related error (invalid_rapt)"`)
 			},
@@ -495,20 +467,17 @@ func TestAuthTokensExport_RequiresOut(t *testing.T) {
 }
 
 func TestAuthTokensImport_NoInput(t *testing.T) {
-	origKeychain := ensureKeychainAccess
-	t.Cleanup(func() { ensureKeychainAccess = origKeychain })
-
 	t.Setenv("GOG_KEYRING_BACKEND", "keychain")
-	ensureKeychainAccess = func() error {
-		return errors.New("keychain locked")
-	}
+	runtime := &app.Runtime{Auth: app.AuthOperations{
+		EnsureKeychainAccess: func(context.Context) error { return errors.New("keychain locked") },
+	}}
 
 	outPath := filepath.Join(t.TempDir(), "token.json")
 	if err := os.WriteFile(outPath, []byte(`{"email":"a@b.com","refresh_token":"rt"}`), 0o600); err != nil {
 		t.Fatalf("write token file: %v", err)
 	}
 
-	err := Execute([]string{"--json", "--no-input", "auth", "tokens", "import", outPath})
+	err := executeWithRuntime([]string{"--json", "--no-input", "auth", "tokens", "import", outPath}, runtime)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -518,27 +487,18 @@ func TestAuthTokensImport_NoInput(t *testing.T) {
 }
 
 func TestAuthTokensImport_FileBackendSkipsKeychain(t *testing.T) {
-	origOpen := openSecretsStore
-	origKeychain := ensureKeychainAccess
-	t.Cleanup(func() {
-		openSecretsStore = origOpen
-		ensureKeychainAccess = origKeychain
-	})
-
 	t.Setenv("GOG_KEYRING_BACKEND", "file")
-	ensureKeychainAccess = func() error {
-		return errors.New("keychain locked")
-	}
 
 	store := newMemSecretsStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
+	runtime := runtimeWithAuthStore(store)
+	runtime.Auth.EnsureKeychainAccess = func(context.Context) error { return errors.New("keychain locked") }
 
 	outPath := filepath.Join(t.TempDir(), "token.json")
 	if err := os.WriteFile(outPath, []byte(`{"email":"a@b.com","refresh_token":"rt"}`), 0o600); err != nil {
 		t.Fatalf("write token file: %v", err)
 	}
 
-	if err := Execute([]string{"--json", "auth", "tokens", "import", outPath}); err != nil {
+	if err := executeWithRuntime([]string{"--json", "auth", "tokens", "import", outPath}, runtime); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 
@@ -548,14 +508,11 @@ func TestAuthTokensImport_FileBackendSkipsKeychain(t *testing.T) {
 }
 
 func TestAuthListRemoveTokensListDelete_JSON(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemSecretsStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
 
 	runtime := &app.Runtime{
 		Auth: app.AuthOperations{
+			OpenSecretsStore: func() (secrets.Store, error) { return store, nil },
 			CheckRefreshToken: func(_ context.Context, _ string, refreshToken string, _ []string, _ time.Duration) error {
 				if refreshToken == "rt2" {
 					return errors.New("invalid_grant")
@@ -570,7 +527,7 @@ func TestAuthListRemoveTokensListDelete_JSON(t *testing.T) {
 
 	listOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "auth", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "auth", "list"}, runtime); err != nil {
 				t.Fatalf("Execute list: %v", err)
 			}
 		})
@@ -614,7 +571,7 @@ func TestAuthListRemoveTokensListDelete_JSON(t *testing.T) {
 	// Tokens list (keys).
 	keysOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "auth", "tokens", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "auth", "tokens", "list"}, runtime); err != nil {
 				t.Fatalf("Execute tokens list: %v", err)
 			}
 		})
@@ -632,7 +589,7 @@ func TestAuthListRemoveTokensListDelete_JSON(t *testing.T) {
 	// Remove (auth remove)
 	rmOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--force", "auth", "remove", "b@b.com"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "--force", "auth", "remove", "b@b.com"}, runtime); err != nil {
 				t.Fatalf("Execute remove: %v", err)
 			}
 		})
@@ -651,7 +608,7 @@ func TestAuthListRemoveTokensListDelete_JSON(t *testing.T) {
 	// Tokens delete (auth tokens delete)
 	delOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--force", "auth", "tokens", "delete", "a@b.com"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "--force", "auth", "tokens", "delete", "a@b.com"}, runtime); err != nil {
 				t.Fatalf("Execute tokens delete: %v", err)
 			}
 		})
@@ -670,7 +627,7 @@ func TestAuthListRemoveTokensListDelete_JSON(t *testing.T) {
 	// Now empty.
 	emptyKeysOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "auth", "tokens", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "auth", "tokens", "list"}, runtime); err != nil {
 				t.Fatalf("Execute tokens list: %v", err)
 			}
 		})
@@ -692,12 +649,9 @@ func TestAuthRemove_CleansUpConfig(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
 	t.Setenv("GOG_KEYRING_BACKEND", "file")
 
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemSecretsStore()
 	_ = store.SetToken("custom-client", "remove@example.com", secrets.Token{RefreshToken: "rt-remove"})
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
+	runtime := runtimeWithAuthStore(store)
 
 	// Write config with alias and client entries for the email we will remove.
 	cfg := config.File{
@@ -717,7 +671,7 @@ func TestAuthRemove_CleansUpConfig(t *testing.T) {
 	// Run auth remove.
 	_ = captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--force", "auth", "remove", "remove@example.com"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "--force", "auth", "remove", "remove@example.com"}, runtime); err != nil {
 				t.Fatalf("Execute remove: %v", err)
 			}
 		})

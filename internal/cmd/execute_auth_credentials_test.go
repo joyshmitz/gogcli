@@ -248,11 +248,8 @@ func TestExecute_AuthCredentialsRemove_RemovesCredentialTokenAndDomain(t *testin
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
 	useFileKeyringForAuthCredentials(t)
 
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemSecretsStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
+	runtime := runtimeWithAuthStore(store)
 
 	if err := config.WriteClientCredentialsFor("work", config.ClientCredentials{ClientID: "id", ClientSecret: "sec"}); err != nil {
 		t.Fatalf("WriteClientCredentialsFor: %v", err)
@@ -272,7 +269,7 @@ func TestExecute_AuthCredentialsRemove_RemovesCredentialTokenAndDomain(t *testin
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--force", "auth", "credentials", "remove", "work"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "--force", "auth", "credentials", "remove", "work"}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
@@ -327,11 +324,8 @@ func TestExecute_AuthCredentialsRemoveAll(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg-config"))
 	useFileKeyringForAuthCredentials(t)
 
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemSecretsStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
+	runtime := runtimeWithAuthStore(store)
 
 	for _, client := range []string{config.DefaultClientName, "work"} {
 		if err := config.WriteClientCredentialsFor(client, config.ClientCredentials{ClientID: "id-" + client, ClientSecret: "sec"}); err != nil {
@@ -350,7 +344,7 @@ func TestExecute_AuthCredentialsRemoveAll(t *testing.T) {
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--force", "auth", "credentials", "remove", "all"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "--force", "auth", "credentials", "remove", "all"}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})

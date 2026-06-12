@@ -2,6 +2,8 @@
 
 package secrets
 
+import "context"
+
 // IsKeychainLockedError returns false on non-macOS platforms.
 func IsKeychainLockedError(_ string) bool {
 	return false
@@ -9,5 +11,10 @@ func IsKeychainLockedError(_ string) bool {
 
 // EnsureKeychainAccess is a no-op on non-macOS platforms.
 func EnsureKeychainAccess() error {
+	return nil
+}
+
+// EnsureKeychainAccessContext is a no-op on non-macOS platforms.
+func EnsureKeychainAccessContext(context.Context) error {
 	return nil
 }

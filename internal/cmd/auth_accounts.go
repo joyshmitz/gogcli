@@ -119,7 +119,7 @@ func (c *AuthStatusCmd) Run(ctx context.Context, flags *RootFlags) error {
 
 func (c *AuthListCmd) Run(ctx context.Context, _ *RootFlags) error {
 	u := ui.FromContext(ctx)
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (c *AuthRemoveCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}, fmt.Sprintf("remove stored token for %s", email)); err != nil {
 		return err
 	}
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return err
 	}

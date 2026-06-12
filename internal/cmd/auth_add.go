@@ -221,11 +221,11 @@ func (c *AuthAddCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return dryRunErr
 	}
 
-	if keychainErr := ensureKeychainAccessIfNeeded(); keychainErr != nil {
+	if keychainErr := ensureKeychainAccessIfNeeded(ctx); keychainErr != nil {
 		return fmt.Errorf("keychain access: %w", keychainErr)
 	}
 
-	refreshToken, err := authorizeGoogle(ctx, googleauth.AuthorizeOptions{
+	refreshToken, err := authorizeGoogleAccount(ctx, googleauth.AuthorizeOptions{
 		Services:                    services,
 		Scopes:                      scopes,
 		Manual:                      manual,
@@ -243,7 +243,7 @@ func (c *AuthAddCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	identity, err := fetchAuthorizedIdentity(ctx, client, refreshToken, scopes, 15*time.Second)
+	identity, err := fetchAuthIdentity(ctx, client, refreshToken, scopes, 15*time.Second)
 	if err != nil {
 		return fmt.Errorf("fetch authorized email: %w", err)
 	}
@@ -252,7 +252,7 @@ func (c *AuthAddCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return fmt.Errorf("authorized as %s, expected %s", authorizedEmail, c.Email)
 	}
 
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return wrapAuthAddStoreError(err)
 	}

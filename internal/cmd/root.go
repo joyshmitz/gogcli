@@ -49,6 +49,7 @@ type RootFlags struct {
 	NoInput             bool   `help:"Never prompt; fail instead (useful for CI)" aliases:"non-interactive,noninteractive"`
 	Verbose             bool   `help:"Enable verbose logging" short:"v"`
 	diagnostics         io.Writer
+	authOperations      app.AuthOperations
 }
 
 type CLI struct {
@@ -156,6 +157,7 @@ func executeWithRuntime(args []string, runtime *app.Runtime) (err error) {
 		return reportEarlyError(runtimeIO.Err, wrapParseError(err))
 	}
 	cli.diagnostics = runtimeIO.Err
+	cli.authOperations = runtime.Auth
 	applyExplicitOutputModePrecedence(kctx, &cli.RootFlags)
 	if !preHomeApplied && strings.TrimSpace(cli.Home) != "" {
 		restoreHome, homeErr := config.SetHomeOverride(cli.Home)

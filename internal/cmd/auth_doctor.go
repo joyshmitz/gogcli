@@ -69,7 +69,7 @@ func (c *AuthDoctorCmd) Run(ctx context.Context, _ *RootFlags) error {
 		addKeyringEnvChecks(ctx, add, backendInfo)
 	}
 
-	store, storeErr := openSecretsStore()
+	store, storeErr := openAuthSecretsStore(ctx)
 	if storeErr != nil {
 		status, hint := classifyAuthDoctorError(storeErr)
 		add("keyring.open", status, storeErr.Error(), hint)

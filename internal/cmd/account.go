@@ -11,8 +11,6 @@ import (
 	"github.com/steipete/gogcli/internal/secrets"
 )
 
-var openSecretsStoreForAccount = secrets.OpenDefault
-
 const (
 	accessTokenPlaceholderAccount = "access-token-user"
 	directAccessTokenWarning      = "Note: Using direct access token (expires in ~1 hour; no auto-refresh)" //nolint:gosec // user-facing warning text, not a credential
@@ -53,7 +51,7 @@ func requireAccount(flags *RootFlags) (string, error) {
 		return finalizeRequiredAccount(flags, accessTokenPlaceholderAccount), nil
 	}
 
-	if account, ok := inferredStoredAccount(client); ok {
+	if account, ok := inferredStoredAccount(client, flags); ok {
 		return account, nil
 	}
 
@@ -103,8 +101,8 @@ func selectConfiguredAccount(value string) (string, bool, error) {
 	return value, true, nil
 }
 
-func inferredStoredAccount(client string) (string, bool) {
-	store, err := openSecretsStoreForAccount()
+func inferredStoredAccount(client string, flags *RootFlags) (string, bool) {
+	store, err := openAccountSecretsStore(flags)
 	if err != nil {
 		return "", false
 	}
@@ -141,6 +139,15 @@ func inferredStoredAccount(client string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func openAccountSecretsStore(flags *RootFlags) (secrets.Store, error) {
+	if flags != nil {
+		if openStore := flags.authOperations.OpenSecretsStore; openStore != nil {
+			return openStore()
+		}
+	}
+	return secrets.OpenDefault()
 }
 
 func directAccessToken(flags *RootFlags) string {

@@ -73,11 +73,11 @@ func (c *AuthImportCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	if err := ensureKeychainAccessIfNeeded(); err != nil {
+	if err := ensureKeychainAccessIfNeeded(ctx); err != nil {
 		return fmt.Errorf("keychain access: %w", err)
 	}
 
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return err
 	}

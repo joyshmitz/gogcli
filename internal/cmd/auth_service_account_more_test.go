@@ -7,15 +7,11 @@ import (
 	"testing"
 
 	"github.com/steipete/gogcli/internal/config"
-	"github.com/steipete/gogcli/internal/secrets"
 )
 
 func TestAuthServiceAccountSet_AndList_Text(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemSecretsStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
+	runtime := runtimeWithAuthStore(store)
 
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -28,7 +24,7 @@ func TestAuthServiceAccountSet_AndList_Text(t *testing.T) {
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"auth", "service-account", "set", "user@example.com", "--key", keyPath}); err != nil {
+			if err := executeWithRuntime([]string{"auth", "service-account", "set", "user@example.com", "--key", keyPath}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
@@ -47,7 +43,7 @@ func TestAuthServiceAccountSet_AndList_Text(t *testing.T) {
 
 	listOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"auth", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"auth", "list"}, runtime); err != nil {
 				t.Fatalf("list: %v", err)
 			}
 		})
@@ -228,11 +224,8 @@ func TestAuthServiceAccountStatus_ConfiguredTextShowsStored(t *testing.T) {
 }
 
 func TestAuthStatus_ShowsServiceAccountPreferred(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemSecretsStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
+	runtime := runtimeWithAuthStore(store)
 
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -245,7 +238,7 @@ func TestAuthStatus_ShowsServiceAccountPreferred(t *testing.T) {
 
 	_ = captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"auth", "service-account", "set", "user@example.com", "--key", keyPath}); err != nil {
+			if err := executeWithRuntime([]string{"auth", "service-account", "set", "user@example.com", "--key", keyPath}, runtime); err != nil {
 				t.Fatalf("Execute: %v", err)
 			}
 		})
@@ -253,7 +246,7 @@ func TestAuthStatus_ShowsServiceAccountPreferred(t *testing.T) {
 
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--account", "user@example.com", "auth", "status"}); err != nil {
+			if err := executeWithRuntime([]string{"--account", "user@example.com", "auth", "status"}, runtime); err != nil {
 				t.Fatalf("status: %v", err)
 			}
 		})

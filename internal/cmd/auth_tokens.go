@@ -28,7 +28,7 @@ type AuthTokensListCmd struct{}
 
 func (c *AuthTokensListCmd) Run(ctx context.Context, _ *RootFlags) error {
 	u := ui.FromContext(ctx)
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *AuthTokensDeleteCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (c *AuthTokensExportCmd) Run(ctx context.Context, _ *RootFlags) error {
 		return usage("empty outPath")
 	}
 
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return err
 	}
@@ -290,11 +290,11 @@ func (c *AuthTokensImportCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return dryRunErr
 	}
 
-	if keychainErr := ensureKeychainAccessIfNeeded(); keychainErr != nil {
+	if keychainErr := ensureKeychainAccessIfNeeded(ctx); keychainErr != nil {
 		return fmt.Errorf("keychain access: %w", keychainErr)
 	}
 
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return err
 	}

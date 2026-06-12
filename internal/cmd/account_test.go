@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/steipete/gogcli/internal/app"
 	"github.com/steipete/gogcli/internal/config"
 	"github.com/steipete/gogcli/internal/secrets"
 )
@@ -102,13 +103,10 @@ func TestRequireAccount_ResolvesAliasEnv(t *testing.T) {
 
 func TestRequireAccount_AutoUsesDefault(t *testing.T) {
 	t.Setenv("GOG_ACCOUNT", "")
-	flags := &RootFlags{Account: "auto"}
-
-	prev := openSecretsStoreForAccount
-	t.Cleanup(func() { openSecretsStoreForAccount = prev })
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		return &fakeSecretsStore{defaultAccount: "default@example.com"}, nil
-	}
+	flags := rootFlagsWithAuthStore(
+		&RootFlags{Account: "auto"},
+		&fakeSecretsStore{defaultAccount: "default@example.com"},
+	)
 
 	got, err := requireAccount(flags)
 	if err != nil {
@@ -121,13 +119,10 @@ func TestRequireAccount_AutoUsesDefault(t *testing.T) {
 
 func TestRequireAccount_ExplicitAutoIgnoresEnv(t *testing.T) {
 	t.Setenv("GOG_ACCOUNT", "env@example.com")
-	flags := &RootFlags{Account: "auto"}
-
-	prev := openSecretsStoreForAccount
-	t.Cleanup(func() { openSecretsStoreForAccount = prev })
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		return &fakeSecretsStore{defaultAccount: "default@example.com"}, nil
-	}
+	flags := rootFlagsWithAuthStore(
+		&RootFlags{Account: "auto"},
+		&fakeSecretsStore{defaultAccount: "default@example.com"},
+	)
 
 	got, err := requireAccount(flags)
 	if err != nil {
@@ -162,13 +157,7 @@ func TestRequireAccount_Missing(t *testing.T) {
 
 func TestRequireAccount_UsesKeyringDefaultAccount(t *testing.T) {
 	t.Setenv("GOG_ACCOUNT", "")
-	flags := &RootFlags{}
-
-	prev := openSecretsStoreForAccount
-	t.Cleanup(func() { openSecretsStoreForAccount = prev })
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		return &fakeSecretsStore{defaultAccount: "default@example.com"}, nil
-	}
+	flags := rootFlagsWithAuthStore(nil, &fakeSecretsStore{defaultAccount: "default@example.com"})
 
 	got, err := requireAccount(flags)
 	if err != nil {
@@ -181,15 +170,12 @@ func TestRequireAccount_UsesKeyringDefaultAccount(t *testing.T) {
 
 func TestRequireAccount_UsesSingleStoredToken(t *testing.T) {
 	t.Setenv("GOG_ACCOUNT", "")
-	flags := &RootFlags{}
-
-	prev := openSecretsStoreForAccount
-	t.Cleanup(func() { openSecretsStoreForAccount = prev })
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		return &fakeSecretsStore{
+	flags := rootFlagsWithAuthStore(
+		nil,
+		&fakeSecretsStore{
 			tokens: []secrets.Token{{Email: "one@example.com", Client: config.DefaultClientName}},
-		}, nil
-	}
+		},
+	)
 
 	got, err := requireAccount(flags)
 	if err != nil {
@@ -202,15 +188,12 @@ func TestRequireAccount_UsesSingleStoredToken(t *testing.T) {
 
 func TestRequireAccount_MissingWhenMultipleTokensAndNoDefault(t *testing.T) {
 	t.Setenv("GOG_ACCOUNT", "")
-	flags := &RootFlags{}
-
-	prev := openSecretsStoreForAccount
-	t.Cleanup(func() { openSecretsStoreForAccount = prev })
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		return &fakeSecretsStore{
+	flags := rootFlagsWithAuthStore(
+		nil,
+		&fakeSecretsStore{
 			tokens: []secrets.Token{{Email: "a@example.com", Client: config.DefaultClientName}, {Email: "b@example.com", Client: config.DefaultClientName}},
-		}, nil
-	}
+		},
+	)
 
 	_, err := requireAccount(flags)
 	if err == nil {
@@ -222,12 +205,11 @@ func TestRequireAccount_AccessTokenNoAccount(t *testing.T) {
 	t.Setenv("GOG_ACCOUNT", "")
 	var diagnostics strings.Builder
 	flags := &RootFlags{AccessToken: "ya29.some-token", diagnostics: &diagnostics}
-
-	prev := openSecretsStoreForAccount
-	t.Cleanup(func() { openSecretsStoreForAccount = prev })
-	openSecretsStoreForAccount = func() (secrets.Store, error) {
-		t.Fatal("openSecretsStoreForAccount should not be called when access token is provided")
-		return nil, errors.New("unreachable")
+	flags.authOperations = app.AuthOperations{
+		OpenSecretsStore: func() (secrets.Store, error) {
+			t.Fatal("OpenSecretsStore should not be called when access token is provided")
+			return nil, errors.New("unreachable")
+		},
 	}
 
 	got, err := requireAccount(flags)

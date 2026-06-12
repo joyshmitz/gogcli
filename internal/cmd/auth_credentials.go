@@ -209,7 +209,7 @@ func (c *AuthCredentialsRemoveCmd) Run(ctx context.Context, flags *RootFlags) er
 		return dryRunErr
 	}
 
-	accounts, err := accountsForClient(client)
+	accounts, err := accountsForClient(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (c *AuthCredentialsRemoveCmd) Run(ctx context.Context, flags *RootFlags) er
 		return deleteErr
 	}
 
-	tokensRemoved, err := removeTokensForClient(client, accounts)
+	tokensRemoved, err := removeTokensForClient(ctx, client, accounts)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (c *AuthCredentialsRemoveCmd) removeAll(ctx context.Context, flags *RootFla
 	planned := make([]authCredentialsRemovalResult, 0, len(creds))
 	for _, info := range creds {
 		names = append(names, info.Client)
-		accounts, accountsErr := accountsForClient(info.Client)
+		accounts, accountsErr := accountsForClient(ctx, info.Client)
 		if accountsErr != nil {
 			return accountsErr
 		}
@@ -278,7 +278,7 @@ func (c *AuthCredentialsRemoveCmd) removeAll(ctx context.Context, flags *RootFla
 		if err := oauthclient.DeleteClientCredentialsFor(item.Client); err != nil {
 			return err
 		}
-		tokens, err := removeTokensForClient(item.Client, item.TokensRemoved)
+		tokens, err := removeTokensForClient(ctx, item.Client, item.TokensRemoved)
 		if err != nil {
 			return err
 		}
@@ -301,8 +301,8 @@ func (c *AuthCredentialsRemoveCmd) removeAll(ctx context.Context, flags *RootFla
 }
 
 // accountsForClient returns emails that have tokens stored under the given client.
-func accountsForClient(client string) ([]string, error) {
-	store, err := openSecretsStore()
+func accountsForClient(ctx context.Context, client string) ([]string, error) {
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -325,11 +325,11 @@ func accountsForClient(client string) ([]string, error) {
 }
 
 // removeTokensForClient deletes tokens for the given accounts under the specified client.
-func removeTokensForClient(client string, emails []string) ([]string, error) {
+func removeTokensForClient(ctx context.Context, client string, emails []string) ([]string, error) {
 	if len(emails) == 0 {
 		return nil, nil
 	}
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return nil, err
 	}

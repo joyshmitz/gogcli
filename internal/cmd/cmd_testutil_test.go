@@ -11,6 +11,7 @@ import (
 
 	"github.com/steipete/gogcli/internal/app"
 	"github.com/steipete/gogcli/internal/outfmt"
+	"github.com/steipete/gogcli/internal/secrets"
 	"github.com/steipete/gogcli/internal/ui"
 )
 
@@ -63,6 +64,39 @@ func withTestRuntime(ctx context.Context, configure func(*app.Runtime)) context.
 	}
 	configure(runtime)
 	return app.WithRuntime(ctx, runtime)
+}
+
+func withAuthStore(ctx context.Context, store secrets.Store) context.Context {
+	return withTestRuntime(ctx, func(runtime *app.Runtime) {
+		runtime.Auth.OpenSecretsStore = func() (secrets.Store, error) {
+			return store, nil
+		}
+	})
+}
+
+func withAuthOperations(ctx context.Context, operations app.AuthOperations) context.Context {
+	return withTestRuntime(ctx, func(runtime *app.Runtime) {
+		runtime.Auth = operations
+	})
+}
+
+func runtimeWithAuthStore(store secrets.Store) *app.Runtime {
+	return &app.Runtime{Auth: app.AuthOperations{
+		OpenSecretsStore: func() (secrets.Store, error) {
+			return store, nil
+		},
+	}}
+}
+
+func rootFlagsWithAuthStore(flags *RootFlags, store secrets.Store) *RootFlags {
+	if flags == nil {
+		flags = &RootFlags{}
+	} else {
+		clone := *flags
+		flags = &clone
+	}
+	flags.authOperations = runtimeWithAuthStore(store).Auth
+	return flags
 }
 
 func executeWithPeopleDirectoryTestService(t *testing.T, args []string, svc *people.Service) executeTestResult {

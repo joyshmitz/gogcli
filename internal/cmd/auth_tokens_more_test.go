@@ -16,16 +16,7 @@ import (
 )
 
 func TestAuthTokensExportImport_JSON(t *testing.T) {
-	origOpen := openSecretsStore
-	origEnsure := ensureKeychainAccess
-	t.Cleanup(func() {
-		openSecretsStore = origOpen
-		ensureKeychainAccess = origEnsure
-	})
-
 	store := newMemStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
-	ensureKeychainAccess = func() error { return nil }
 
 	tok := secrets.Token{
 		Email:        "a@b.com",
@@ -39,7 +30,13 @@ func TestAuthTokensExportImport_JSON(t *testing.T) {
 	}
 
 	outPath := filepath.Join(t.TempDir(), "token.json")
-	ctx := newCmdJSONOutputContext(t, os.Stdout, os.Stderr)
+	ctx := withAuthOperations(
+		newCmdJSONOutputContext(t, os.Stdout, os.Stderr),
+		app.AuthOperations{
+			OpenSecretsStore:     func() (secrets.Store, error) { return store, nil },
+			EnsureKeychainAccess: func(context.Context) error { return nil },
+		},
+	)
 	var err error
 
 	exportCmd := AuthTokensExportCmd{
@@ -67,7 +64,10 @@ func TestAuthTokensExportImport_JSON(t *testing.T) {
 
 	// Import back into a fresh store.
 	newStore := newMemStore()
-	openSecretsStore = func() (secrets.Store, error) { return newStore, nil }
+	ctx = withAuthOperations(ctx, app.AuthOperations{
+		OpenSecretsStore:     func() (secrets.Store, error) { return newStore, nil },
+		EnsureKeychainAccess: func(context.Context) error { return nil },
+	})
 
 	importCmd := AuthTokensImportCmd{InPath: outPath}
 	err = importCmd.Run(ctx, &RootFlags{})
@@ -84,17 +84,14 @@ func TestAuthTokensExportImport_JSON(t *testing.T) {
 }
 
 func TestAuthList_CheckJSON(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
 
 	if err := store.SetToken(config.DefaultClientName, "a@b.com", secrets.Token{Email: "a@b.com", RefreshToken: "rt"}); err != nil {
 		t.Fatalf("SetToken: %v", err)
 	}
 
 	ctx := withTestRuntime(newCmdJSONOutputContext(t, os.Stdout, os.Stderr), func(runtime *app.Runtime) {
+		runtime.Auth.OpenSecretsStore = func() (secrets.Store, error) { return store, nil }
 		runtime.Auth.CheckRefreshToken = func(context.Context, string, string, []string, time.Duration) error {
 			return nil
 		}
@@ -124,11 +121,7 @@ func TestAuthList_CheckJSON(t *testing.T) {
 }
 
 func TestAuthList_JSON_DoesNotCollapseSameEmailAcrossClients(t *testing.T) {
-	origOpen := openSecretsStore
-	t.Cleanup(func() { openSecretsStore = origOpen })
-
 	store := newMemStore()
-	openSecretsStore = func() (secrets.Store, error) { return store, nil }
 
 	for _, client := range []string{"compose", "inbox", "ro", "rw"} {
 		if err := store.SetToken(client, "user@example.com", secrets.Token{
@@ -140,7 +133,7 @@ func TestAuthList_JSON_DoesNotCollapseSameEmailAcrossClients(t *testing.T) {
 		}
 	}
 
-	ctx := newCmdJSONOutputContext(t, os.Stdout, os.Stderr)
+	ctx := withAuthStore(newCmdJSONOutputContext(t, os.Stdout, os.Stderr), store)
 	listCmd := AuthListCmd{}
 	out := captureStdout(t, func() {
 		runErr := listCmd.Run(ctx, &RootFlags{})
@@ -178,7 +171,7 @@ func TestAuthList_JSON_DoesNotCollapseSameEmailAcrossClients(t *testing.T) {
 
 	filteredOut := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--client", "ro", "auth", "list"}); err != nil {
+			if err := executeWithRuntime([]string{"--json", "--client", "ro", "auth", "list"}, runtimeWithAuthStore(store)); err != nil {
 				t.Fatalf("Execute filtered list: %v", err)
 			}
 		})

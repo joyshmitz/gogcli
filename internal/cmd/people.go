@@ -101,7 +101,7 @@ func fetchPeopleMeProfileFromToken(ctx context.Context, account string) (*people
 	if err != nil {
 		return nil, err
 	}
-	store, err := openSecretsStore()
+	store, err := openAuthSecretsStore(ctx)
 	if err != nil {
 		return nil, err
 	}

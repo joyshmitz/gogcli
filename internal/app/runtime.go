@@ -75,7 +75,7 @@ type (
 	AuthorizeGoogleFunc          func(context.Context, googleauth.AuthorizeOptions) (string, error)
 	StartManageServerFunc        func(context.Context, googleauth.ManageServerOptions) error
 	CheckRefreshTokenFunc        func(context.Context, string, string, []string, time.Duration) error
-	EnsureKeychainAccessFunc     func() error
+	EnsureKeychainAccessFunc     func(context.Context) error
 	FetchAuthorizedIdentityFunc  func(context.Context, string, string, []string, time.Duration) (googleauth.Identity, error)
 	ManualAuthURLFunc            func(context.Context, googleauth.AuthorizeOptions) (googleauth.ManualAuthURLResult, error)
 )
