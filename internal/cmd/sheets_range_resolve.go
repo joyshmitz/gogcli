@@ -8,6 +8,7 @@ import (
 	"google.golang.org/api/sheets/v4"
 
 	"github.com/steipete/gogcli/internal/selectorutil"
+	"github.com/steipete/gogcli/internal/sheetsa1"
 )
 
 type spreadsheetRangeCatalog struct {
@@ -105,7 +106,7 @@ func resolveGridRangeWithCatalog(input string, catalog *spreadsheetRangeCatalog,
 
 	// If it looks like A1 but doesn't include a sheet name, preserve the prior
 	// strict requirement for A1-with-sheet ranges for GridRange-based operations.
-	if _, a1Err := parseA1Range(in); a1Err == nil {
+	if _, a1Err := sheetsa1.Parse(in); a1Err == nil {
 		return nil, usagef("%s range must include a sheet name (e.g. Sheet1!A1:B2) or be a named range", label)
 	}
 

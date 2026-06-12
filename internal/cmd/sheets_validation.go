@@ -11,6 +11,7 @@ import (
 	"google.golang.org/api/sheets/v4"
 
 	"github.com/steipete/gogcli/internal/outfmt"
+	"github.com/steipete/gogcli/internal/sheetsa1"
 	"github.com/steipete/gogcli/internal/sheetsvalidation"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -140,7 +141,7 @@ func resolveValidationReadRange(input string, catalog *spreadsheetRangeCatalog) 
 			return canonicalName, gridRange, nil
 		}
 	}
-	parsed, parseErr := parseA1Range(rangeSpec)
+	parsed, parseErr := sheetsa1.Parse(rangeSpec)
 	if parseErr == nil && parsed.SheetName == "" {
 		_, sheetTitle, err := resolveSheetIDByNameOrFirstWithCatalog(catalog, "")
 		if err != nil {
@@ -379,6 +380,8 @@ func resolveValidationGridRange(ctx context.Context, svc *sheets.Service, spread
 }
 
 type tableValidationSpan = sheetsvalidation.Span
+
+type a1Range = sheetsa1.Range
 
 func sheetsValidationPlannerError(err error) error {
 	var validationErr sheetsvalidation.ValidationError
@@ -686,7 +689,7 @@ func toGridRange(r a1Range, sheetID int64) *sheets.GridRange {
 }
 
 func parseSheetRange(a1, label string) (a1Range, error) {
-	r, err := parseA1Range(a1)
+	r, err := sheetsa1.Parse(a1)
 	if err != nil {
 		return a1Range{}, usagef("parse %s range: %v", label, err)
 	}

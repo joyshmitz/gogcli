@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"google.golang.org/api/sheets/v4"
+
+	"github.com/steipete/gogcli/internal/sheetsa1"
 )
 
 func parseEmbeddedChartJSON(b []byte) (*sheets.EmbeddedChart, error) {
@@ -269,7 +271,7 @@ func parseA1Cell(cell string) (a1Cell, error) {
 		return a1Cell{}, fmt.Errorf("invalid cell reference %q", cell)
 	}
 
-	col, err := colLettersToIndex(strings.ToUpper(cell[:i]))
+	col, err := sheetsa1.ColumnIndex(strings.ToUpper(cell[:i]))
 	if err != nil {
 		return a1Cell{}, err
 	}

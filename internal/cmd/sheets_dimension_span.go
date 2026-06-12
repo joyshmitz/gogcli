@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/steipete/gogcli/internal/sheetsa1"
 )
 
 var (
@@ -19,7 +21,7 @@ type dimensionSpan struct {
 }
 
 func parseColumnsSpan(spec, label string) (dimensionSpan, error) {
-	sheetName, part, err := splitA1Sheet(strings.TrimSpace(spec))
+	sheetName, part, err := sheetsa1.Split(strings.TrimSpace(spec))
 	if err != nil {
 		return dimensionSpan{}, fmt.Errorf("parse %s range: %w", label, err)
 	}
@@ -29,13 +31,13 @@ func parseColumnsSpan(spec, label string) (dimensionSpan, error) {
 		return dimensionSpan{}, fmt.Errorf("invalid %s range %q (expected A:C or Sheet!A:C)", label, spec)
 	}
 
-	startCol, err := colLettersToIndex(m[1])
+	startCol, err := sheetsa1.ColumnIndex(m[1])
 	if err != nil {
 		return dimensionSpan{}, err
 	}
 	endCol := startCol
 	if m[2] != "" {
-		endCol, err = colLettersToIndex(m[2])
+		endCol, err = sheetsa1.ColumnIndex(m[2])
 		if err != nil {
 			return dimensionSpan{}, err
 		}
@@ -52,7 +54,7 @@ func parseColumnsSpan(spec, label string) (dimensionSpan, error) {
 }
 
 func parseRowsSpan(spec, label string) (dimensionSpan, error) {
-	sheetName, part, err := splitA1Sheet(strings.TrimSpace(spec))
+	sheetName, part, err := sheetsa1.Split(strings.TrimSpace(spec))
 	if err != nil {
 		return dimensionSpan{}, fmt.Errorf("parse %s range: %w", label, err)
 	}
