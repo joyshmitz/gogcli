@@ -189,8 +189,8 @@ func sanitizeChatText(s string) string {
 	return replacer.Replace(s)
 }
 
-// expandChatAttachmentPaths resolves user-supplied attachment paths (~, env vars)
-// to absolute paths without reading the files. Used for validation and dry-run.
+// expandChatAttachmentPaths resolves user-supplied attachment paths beginning
+// with ~ without reading the files. Used for validation and dry-run.
 func expandChatAttachmentPaths(paths []string) ([]string, error) {
 	expanded := make([]string, 0, len(paths))
 	for _, path := range paths {

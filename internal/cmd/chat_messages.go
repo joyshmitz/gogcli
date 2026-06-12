@@ -161,40 +161,17 @@ type ChatMessagesSendCmd struct {
 
 func (c *ChatMessagesSendCmd) Run(ctx context.Context, flags *RootFlags) error {
 	u := ui.FromContext(ctx)
-	space, err := normalizeSpace(c.Space)
-	if err != nil {
-		return usage("required: space")
-	}
-
-	text := strings.TrimSpace(c.Text)
-	attachPaths, err := expandChatAttachmentPaths(c.Attach)
+	plan, err := newChatMessageSendPlan(chatMessageSendInput{
+		Space:       c.Space,
+		Text:        c.Text,
+		Thread:      c.Thread,
+		Attachments: c.Attach,
+	})
 	if err != nil {
 		return err
 	}
-	if text == "" && len(attachPaths) == 0 {
-		return usage("required: --text or --attach")
-	}
 
-	message := &chat.Message{Text: text}
-	thread := strings.TrimSpace(c.Thread)
-	threadName := ""
-	if thread != "" {
-		tn, threadErr := normalizeThread(space, thread)
-		if threadErr != nil {
-			return usage(fmt.Sprintf("invalid thread: %v", threadErr))
-		}
-		threadName = tn
-		message.Thread = &chat.Thread{Name: tn}
-	}
-
-	if dryRunErr := dryRunExit(ctx, flags, "chat.messages.send", map[string]any{
-		"space":                        space,
-		"text":                         text,
-		"thread":                       threadName,
-		"thread_raw":                   thread,
-		"reply_fallback_to_new_thread": thread != "",
-		"attachments":                  attachPaths,
-	}); dryRunErr != nil {
+	if dryRunErr := dryRunExit(ctx, flags, "chat.messages.send", plan.dryRunPayload()); dryRunErr != nil {
 		return dryRunErr
 	}
 
@@ -211,17 +188,18 @@ func (c *ChatMessagesSendCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	if len(attachPaths) > 0 {
-		attachments, uploadErr := uploadChatAttachments(ctx, svc, space, attachPaths)
-		if uploadErr != nil {
-			return uploadErr
+	var attachments []*chat.Attachment
+	if len(plan.Attachments) > 0 {
+		attachments, err = uploadChatAttachments(ctx, svc, plan.Space, plan.Attachments)
+		if err != nil {
+			return err
 		}
-		message.Attachment = attachments
 	}
+	message := plan.message(attachments)
 
-	call := svc.Spaces.Messages.Create(space, message)
-	if thread != "" {
-		call = call.MessageReplyOption("REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD")
+	call := svc.Spaces.Messages.Create(plan.Space, message)
+	if replyOption := plan.replyOption(); replyOption != "" {
+		call = call.MessageReplyOption(replyOption)
 	}
 
 	resp, err := call.Do()
@@ -234,7 +212,7 @@ func (c *ChatMessagesSendCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if resp == nil {
-		u.Out().Linef("space\t%s", space)
+		u.Out().Linef("space\t%s", plan.Space)
 		return nil
 	}
 	if resp.Name != "" {
