@@ -77,7 +77,7 @@ func (c *YouTubeActivitiesListCmd) Run(ctx context.Context, flags *RootFlags) er
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"items":         youtubeItemsOrEmpty(resp.Items),
 			"nextPageToken": resp.NextPageToken,
 		})
@@ -160,7 +160,7 @@ func (c *YouTubeVideosListCmd) Run(ctx context.Context, flags *RootFlags) error 
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"items":         youtubeItemsOrEmpty(resp.Items),
 			"nextPageToken": resp.NextPageToken,
 		})
@@ -244,7 +244,7 @@ func (c *YouTubePlaylistsListCmd) Run(ctx context.Context, flags *RootFlags) err
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"items":         youtubeItemsOrEmpty(resp.Items),
 			"nextPageToken": resp.NextPageToken,
 		})
@@ -319,7 +319,7 @@ func (c *YouTubeCommentsListCmd) Run(ctx context.Context, flags *RootFlags) erro
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"items":         youtubeItemsOrEmpty(resp.Items),
 			"nextPageToken": resp.NextPageToken,
 		})
@@ -407,7 +407,7 @@ func (c *YouTubeChannelsListCmd) Run(ctx context.Context, flags *RootFlags) erro
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"items":         youtubeItemsOrEmpty(resp.Items),
 			"nextPageToken": resp.NextPageToken,
 		})
@@ -496,7 +496,7 @@ func (c *YouTubeSearchListCmd) Run(ctx context.Context, flags *RootFlags) error 
 	resp.Items = filterYouTubeSearchItemsByType(resp.Items, types)
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"items":         youtubeItemsOrEmpty(resp.Items),
 			"nextPageToken": resp.NextPageToken,
 		})

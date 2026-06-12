@@ -5,14 +5,9 @@ import (
 
 	youtube "google.golang.org/api/youtube/v3"
 
+	"github.com/steipete/gogcli/internal/app"
 	"github.com/steipete/gogcli/internal/config"
 	"github.com/steipete/gogcli/internal/googleapi"
-)
-
-var (
-	newYouTubeWithAPIKey         = googleapi.NewYouTubeWithAPIKey
-	newYouTubeForAccount         = googleapi.NewYouTubeForAccount
-	newYouTubeCommentsForAccount = googleapi.NewYouTubeCommentsForAccount
 )
 
 func getYouTubeAPIKey() (string, error) {
@@ -32,13 +27,22 @@ func getYouTubeServiceWithAPIKey(ctx context.Context) (*youtube.Service, error) 
 	if err != nil {
 		return nil, err
 	}
-	return newYouTubeWithAPIKey(ctx, key)
+	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.YouTubeAPIKey != nil {
+		return runtime.Services.YouTubeAPIKey(ctx, key)
+	}
+	return googleapi.NewYouTubeWithAPIKey(ctx, key)
 }
 
 func getYouTubeServiceForAccount(ctx context.Context, account string) (*youtube.Service, error) {
-	return newYouTubeForAccount(ctx, account)
+	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.YouTubeAccount != nil {
+		return runtime.Services.YouTubeAccount(ctx, account)
+	}
+	return googleapi.NewYouTubeForAccount(ctx, account)
 }
 
 func getYouTubeCommentsServiceForAccount(ctx context.Context, account string) (*youtube.Service, error) {
-	return newYouTubeCommentsForAccount(ctx, account)
+	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.YouTubeComments != nil {
+		return runtime.Services.YouTubeComments(ctx, account)
+	}
+	return googleapi.NewYouTubeCommentsForAccount(ctx, account)
 }

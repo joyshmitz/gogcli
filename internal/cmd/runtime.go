@@ -72,6 +72,9 @@ func newDefaultRuntime() *app.Runtime {
 			SitesDrive:      googleapi.NewSitesDrive,
 			Slides:          googleapi.NewSlides,
 			Tasks:           googleapi.NewTasks,
+			YouTubeAPIKey:   googleapi.NewYouTubeWithAPIKey,
+			YouTubeAccount:  googleapi.NewYouTubeForAccount,
+			YouTubeComments: googleapi.NewYouTubeCommentsForAccount,
 			Zoom:            newZoomMeetingClient,
 			DriveDownload:   driveDownload,
 			DriveExport:     driveExportDownload,
@@ -178,6 +181,15 @@ func normalizedRuntime(runtime *app.Runtime) *app.Runtime {
 	}
 	if normalized.Services.Tasks == nil {
 		normalized.Services.Tasks = defaults.Services.Tasks
+	}
+	if normalized.Services.YouTubeAPIKey == nil {
+		normalized.Services.YouTubeAPIKey = defaults.Services.YouTubeAPIKey
+	}
+	if normalized.Services.YouTubeAccount == nil {
+		normalized.Services.YouTubeAccount = defaults.Services.YouTubeAccount
+	}
+	if normalized.Services.YouTubeComments == nil {
+		normalized.Services.YouTubeComments = defaults.Services.YouTubeComments
 	}
 	if normalized.Services.Zoom == nil {
 		normalized.Services.Zoom = defaults.Services.Zoom

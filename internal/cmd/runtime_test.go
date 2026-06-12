@@ -26,6 +26,7 @@ import (
 	searchconsoleapi "google.golang.org/api/searchconsole/v1"
 	"google.golang.org/api/sheets/v4"
 	"google.golang.org/api/slides/v1"
+	youtubeapi "google.golang.org/api/youtube/v3"
 
 	"github.com/steipete/gogcli/internal/app"
 	"github.com/steipete/gogcli/internal/googleapi"
@@ -624,6 +625,45 @@ func TestSitesDriveServiceUsesRuntimeFactory(t *testing.T) {
 	}
 	if gotAccount != "test@example.com" {
 		t.Fatalf("factory account = %q, want test@example.com", gotAccount)
+	}
+}
+
+func TestYouTubeServiceFactoriesUseRuntime(t *testing.T) {
+	t.Setenv("GOG_YOUTUBE_API_KEY", "runtime-key")
+
+	apiKeyService := &youtubeapi.Service{}
+	accountService := &youtubeapi.Service{}
+	commentsService := &youtubeapi.Service{}
+	var gotAPIKey string
+	var gotAccount string
+	var gotCommentsAccount string
+	runtime := &app.Runtime{Services: app.Services{
+		YouTubeAPIKey: func(_ context.Context, key string) (*youtubeapi.Service, error) {
+			gotAPIKey = key
+			return apiKeyService, nil
+		},
+		YouTubeAccount: func(_ context.Context, account string) (*youtubeapi.Service, error) {
+			gotAccount = account
+			return accountService, nil
+		},
+		YouTubeComments: func(_ context.Context, account string) (*youtubeapi.Service, error) {
+			gotCommentsAccount = account
+			return commentsService, nil
+		},
+	}}
+	ctx := app.WithRuntime(context.Background(), runtime)
+
+	gotAPIKeyService, err := getYouTubeServiceWithAPIKey(ctx)
+	if err != nil || gotAPIKeyService != apiKeyService || gotAPIKey != "runtime-key" {
+		t.Fatalf("API key service = (%p, %v, %q)", gotAPIKeyService, err, gotAPIKey)
+	}
+	gotAccountService, err := getYouTubeServiceForAccount(ctx, "account@example.com")
+	if err != nil || gotAccountService != accountService || gotAccount != "account@example.com" {
+		t.Fatalf("account service = (%p, %v, %q)", gotAccountService, err, gotAccount)
+	}
+	gotCommentsService, err := getYouTubeCommentsServiceForAccount(ctx, "comments@example.com")
+	if err != nil || gotCommentsService != commentsService || gotCommentsAccount != "comments@example.com" {
+		t.Fatalf("comments service = (%p, %v, %q)", gotCommentsService, err, gotCommentsAccount)
 	}
 }
 

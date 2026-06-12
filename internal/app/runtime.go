@@ -26,6 +26,7 @@ import (
 	"google.golang.org/api/sheets/v4"
 	"google.golang.org/api/slides/v1"
 	"google.golang.org/api/tasks/v1"
+	"google.golang.org/api/youtube/v3"
 
 	"github.com/steipete/gogcli/internal/googleapi"
 	"github.com/steipete/gogcli/internal/zoom"
@@ -62,6 +63,7 @@ type (
 	SheetsServiceFactory         func(context.Context, string) (*sheets.Service, error)
 	SlidesServiceFactory         func(context.Context, string) (*slides.Service, error)
 	TasksServiceFactory          func(context.Context, string) (*tasks.Service, error)
+	YouTubeServiceFactory        func(context.Context, string) (*youtube.Service, error)
 	ZoomMeetingClientFactory     func(string) (ZoomMeetingClient, error)
 	DriveDownloadFunc            func(context.Context, *drive.Service, string) (*http.Response, error)
 	DriveExportFunc              func(context.Context, *drive.Service, string, string) (*http.Response, error)
@@ -102,6 +104,9 @@ type Services struct {
 	SitesDrive      DriveServiceFactory
 	Slides          SlidesServiceFactory
 	Tasks           TasksServiceFactory
+	YouTubeAPIKey   YouTubeServiceFactory
+	YouTubeAccount  YouTubeServiceFactory
+	YouTubeComments YouTubeServiceFactory
 	Zoom            ZoomMeetingClientFactory
 	DriveDownload   DriveDownloadFunc
 	DriveExport     DriveExportFunc
