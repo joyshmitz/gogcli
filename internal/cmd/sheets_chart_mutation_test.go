@@ -3,11 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
 	"testing"
-
-	"google.golang.org/api/sheets/v4"
 )
 
 func TestSheetsChartCreate_JSON(t *testing.T) {
@@ -442,86 +439,5 @@ func TestSheetsChartDelete_RejectsInvalidChartID(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "chartId must be greater than 0") {
 		t.Errorf("unexpected error: %v", err)
-	}
-}
-
-func TestRemapZeroSheetIDsInChartSpec(t *testing.T) {
-	spec := &sheets.ChartSpec{
-		BasicChart: &sheets.BasicChartSpec{
-			Domains: []*sheets.BasicChartDomain{
-				{
-					Domain: &sheets.ChartData{
-						SourceRange: &sheets.ChartSourceRange{
-							Sources: []*sheets.GridRange{
-								{SheetId: 0, StartRowIndex: 1, EndRowIndex: 4},
-							},
-						},
-					},
-				},
-			},
-			Series: []*sheets.BasicChartSeries{
-				{
-					Series: &sheets.ChartData{
-						SourceRange: &sheets.ChartSourceRange{
-							Sources: []*sheets.GridRange{
-								{SheetId: 42, StartRowIndex: 1, EndRowIndex: 4},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	remapZeroSheetIDsInChartSpec(spec, 123)
-
-	domainRange := spec.BasicChart.Domains[0].Domain.SourceRange.Sources[0]
-	if domainRange.SheetId != 123 {
-		t.Fatalf("domain sheetId = %d, want 123", domainRange.SheetId)
-	}
-	if !slices.Contains(domainRange.ForceSendFields, "SheetId") {
-		t.Fatalf("domain ForceSendFields = %v, want SheetId", domainRange.ForceSendFields)
-	}
-
-	seriesRange := spec.BasicChart.Series[0].Series.SourceRange.Sources[0]
-	if seriesRange.SheetId != 42 {
-		t.Fatalf("explicit series sheetId = %d, want unchanged 42", seriesRange.SheetId)
-	}
-}
-
-func TestParseA1Cell(t *testing.T) {
-	tests := []struct {
-		input   string
-		wantRow int
-		wantCol int
-		wantErr bool
-	}{
-		{"A1", 1, 1, false},
-		{"B5", 5, 2, false},
-		{"Z26", 26, 26, false},
-		{"AA1", 1, 27, false},
-		{"E10", 10, 5, false},
-		{"", 0, 0, true},
-		{"1A", 0, 0, true},
-		{"A", 0, 0, true},
-		{"A0", 0, 0, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, err := parseA1Cell(tt.input)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("expected error for %q", tt.input)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error for %q: %v", tt.input, err)
-			}
-			if got.row != tt.wantRow || got.col != tt.wantCol {
-				t.Errorf("parseA1Cell(%q) = {row:%d col:%d}, want {row:%d col:%d}", tt.input, got.row, got.col, tt.wantRow, tt.wantCol)
-			}
-		})
 	}
 }

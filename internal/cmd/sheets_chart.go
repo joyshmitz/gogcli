@@ -9,6 +9,7 @@ import (
 	"google.golang.org/api/sheets/v4"
 
 	"github.com/steipete/gogcli/internal/outfmt"
+	"github.com/steipete/gogcli/internal/sheetschart"
 	"github.com/steipete/gogcli/internal/ui"
 )
 
@@ -206,12 +207,12 @@ func (c *SheetsChartCreateCmd) Run(ctx context.Context, flags *RootFlags) error 
 		return usage("empty --spec-json")
 	}
 
-	chart, err := parseEmbeddedChartJSON(specBytes)
+	chart, err := sheetschart.ParseEmbedded(specBytes)
 	if err != nil {
 		return usagef("invalid --spec-json: %v", err)
 	}
 	if c.Anchor != "" {
-		if _, anchorErr := parseA1Cell(c.Anchor); anchorErr != nil {
+		if _, anchorErr := sheetschart.ParseAnchor(c.Anchor); anchorErr != nil {
 			return usagef("invalid --anchor %q: %v", c.Anchor, anchorErr)
 		}
 	}
@@ -236,7 +237,7 @@ func (c *SheetsChartCreateCmd) Run(ctx context.Context, flags *RootFlags) error 
 		return err
 	}
 
-	needsSheetResolution := c.Sheet != "" || c.Anchor != "" || chartSpecHasZeroSheetIDs(chart.Spec)
+	needsSheetResolution := c.Sheet != "" || c.Anchor != "" || sheetschart.HasZeroSheetIDs(chart.Spec)
 	var sheet chartSheetResolution
 	if needsSheetResolution {
 		var posErr error
@@ -244,14 +245,14 @@ func (c *SheetsChartCreateCmd) Run(ctx context.Context, flags *RootFlags) error 
 		if posErr != nil {
 			return posErr
 		}
-		normalizeZeroSheetIDsInChartSpec(chart.Spec, sheet.SheetID, sheet.HasSheetIDZero)
+		sheetschart.NormalizeZeroSheetIDs(chart.Spec, sheet.SheetID, sheet.HasSheetIDZero)
 	}
 
 	// Resolve sheet name → ID for the anchor position.
 	if c.Sheet != "" || c.Anchor != "" {
-		pos, posErr := buildChartPosition(sheet.SheetID, c.Anchor, c.Width, c.Height)
+		pos, posErr := sheetschart.BuildPosition(sheet.SheetID, c.Anchor, c.Width, c.Height)
 		if posErr != nil {
-			return posErr
+			return usagef("invalid --anchor %q: %v", c.Anchor, posErr)
 		}
 		chart.Position = pos
 	}
@@ -310,7 +311,7 @@ func (c *SheetsChartUpdateCmd) Run(ctx context.Context, flags *RootFlags) error 
 		return usage("empty --spec-json")
 	}
 
-	spec, err := parseChartSpecJSON(specBytes)
+	spec, err := sheetschart.ParseSpec(specBytes)
 	if err != nil {
 		return usagef("invalid --spec-json: %v", err)
 	}
@@ -336,7 +337,7 @@ func (c *SheetsChartUpdateCmd) Run(ctx context.Context, flags *RootFlags) error 
 	if err != nil {
 		return err
 	}
-	normalizeZeroSheetIDsInChartSpec(spec, sheet.SheetID, sheet.HasSheetIDZero)
+	sheetschart.NormalizeZeroSheetIDs(spec, sheet.SheetID, sheet.HasSheetIDZero)
 
 	req := &sheets.BatchUpdateSpreadsheetRequest{
 		Requests: []*sheets.Request{
