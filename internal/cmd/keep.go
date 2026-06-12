@@ -69,7 +69,7 @@ func (c *KeepListCmd) Run(ctx context.Context, flags *RootFlags, keep *KeepCmd) 
 	}
 
 	if outfmt.IsJSON(ctx) {
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"notes":         notes,
 			"nextPageToken": nextPageToken,
 		}); err != nil {
@@ -170,7 +170,7 @@ func (c *KeepSearchCmd) Run(ctx context.Context, flags *RootFlags, keep *KeepCmd
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"notes": allNotes,
 			"query": c.Query,
 			"count": len(allNotes),
@@ -219,7 +219,7 @@ func (c *KeepGetCmd) Run(ctx context.Context, flags *RootFlags, keep *KeepCmd) e
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{"note": note})
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{"note": note})
 	}
 
 	u.Out().Linef("name\t%s", note.Name)
@@ -298,7 +298,7 @@ func (c *KeepAttachmentCmd) Run(ctx context.Context, flags *RootFlags, keep *Kee
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"downloaded": true,
 			"path":       outPath,
 			"bytes":      written,
@@ -375,7 +375,7 @@ func (c *KeepCreateCmd) Run(ctx context.Context, flags *RootFlags, keep *KeepCmd
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{"note": created})
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{"note": created})
 	}
 
 	u.Out().Linef("name\t%s", created.Name)
@@ -425,7 +425,7 @@ func getKeepService(ctx context.Context, flags *RootFlags, keepCmd *KeepCmd) (*k
 		if keepCmd.Impersonate == "" {
 			return nil, fmt.Errorf("--impersonate is required when using --service-account")
 		}
-		return newKeepServiceWithSA(ctx, keepCmd.ServiceAccount, keepCmd.Impersonate)
+		return keepServiceWithServiceAccount(ctx, keepCmd.ServiceAccount, keepCmd.Impersonate)
 	}
 
 	account, err := requireAccount(flags)
@@ -438,7 +438,7 @@ func getKeepService(ctx context.Context, flags *RootFlags, keepCmd *KeepCmd) (*k
 		return nil, err
 	}
 	if _, statErr := os.Stat(genericSAPath); statErr == nil {
-		return newKeepServiceWithSA(ctx, genericSAPath, account)
+		return keepServiceWithServiceAccount(ctx, genericSAPath, account)
 	}
 
 	saPath, err := config.ExistingKeepServiceAccountPath(account)
@@ -447,7 +447,7 @@ func getKeepService(ctx context.Context, flags *RootFlags, keepCmd *KeepCmd) (*k
 	}
 
 	if _, statErr := os.Stat(saPath); statErr == nil {
-		return newKeepServiceWithSA(ctx, saPath, account)
+		return keepServiceWithServiceAccount(ctx, saPath, account)
 	}
 
 	return nil, usage("Keep is Workspace-only and requires a service account. Configure it with: gog auth service-account set <email> --key <service-account.json> (or legacy: gog auth keep <email> --key <service-account.json>)")

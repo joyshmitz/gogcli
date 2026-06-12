@@ -17,6 +17,7 @@ import (
 	"google.golang.org/api/drive/v3"
 	formsapi "google.golang.org/api/forms/v1"
 	"google.golang.org/api/gmail/v1"
+	keepapi "google.golang.org/api/keep/v1"
 	"google.golang.org/api/people/v1"
 	searchconsoleapi "google.golang.org/api/searchconsole/v1"
 	"google.golang.org/api/sheets/v4"
@@ -51,6 +52,7 @@ func newDefaultRuntime() *app.Runtime {
 			Drive:           googleapi.NewDrive,
 			Forms:           googleapi.NewForms,
 			Gmail:           googleapi.NewGmail,
+			Keep:            newKeepServiceWithSA,
 			PeopleContacts:  googleapi.NewPeopleContacts,
 			PeopleDirectory: googleapi.NewPeopleDirectory,
 			PeopleOther:     googleapi.NewPeopleOtherContacts,
@@ -121,6 +123,9 @@ func normalizedRuntime(runtime *app.Runtime) *app.Runtime {
 	}
 	if normalized.Services.Gmail == nil {
 		normalized.Services.Gmail = defaults.Services.Gmail
+	}
+	if normalized.Services.Keep == nil {
+		normalized.Services.Keep = defaults.Services.Keep
 	}
 	if normalized.Services.PeopleContacts == nil {
 		normalized.Services.PeopleContacts = defaults.Services.PeopleContacts
@@ -242,6 +247,13 @@ func cloudIdentityService(ctx context.Context, account string) (*cloudidentity.S
 		return runtime.Services.CloudIdentity(ctx, account)
 	}
 	return googleapi.NewCloudIdentityGroups(ctx, account)
+}
+
+func keepServiceWithServiceAccount(ctx context.Context, path, impersonate string) (*keepapi.Service, error) {
+	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.Keep != nil {
+		return runtime.Services.Keep(ctx, path, impersonate)
+	}
+	return newKeepServiceWithSA(ctx, path, impersonate)
 }
 
 func photosService(ctx context.Context, account string) (*googleapi.PhotosClient, error) {

@@ -17,6 +17,7 @@ import (
 	"google.golang.org/api/drive/v3"
 	formsapi "google.golang.org/api/forms/v1"
 	"google.golang.org/api/gmail/v1"
+	keepapi "google.golang.org/api/keep/v1"
 	"google.golang.org/api/people/v1"
 	searchconsoleapi "google.golang.org/api/searchconsole/v1"
 	"google.golang.org/api/sheets/v4"
@@ -144,6 +145,33 @@ func TestCloudIdentityServiceUsesRuntimeFactory(t *testing.T) {
 	}
 	if gotAccount != "test@example.com" {
 		t.Fatalf("factory account = %q, want test@example.com", gotAccount)
+	}
+}
+
+func TestKeepServiceUsesRuntimeFactory(t *testing.T) {
+	t.Parallel()
+
+	want := &keepapi.Service{}
+	var gotPath string
+	var gotImpersonate string
+	runtime := &app.Runtime{Services: app.Services{
+		Keep: func(_ context.Context, path, impersonate string) (*keepapi.Service, error) {
+			gotPath = path
+			gotImpersonate = impersonate
+			return want, nil
+		},
+	}}
+	ctx := app.WithRuntime(context.Background(), runtime)
+
+	got, err := keepServiceWithServiceAccount(ctx, "/tmp/service-account.json", "test@example.com")
+	if err != nil {
+		t.Fatalf("keepServiceWithServiceAccount() error = %v", err)
+	}
+	if got != want {
+		t.Fatalf("keepServiceWithServiceAccount() = %p, want %p", got, want)
+	}
+	if gotPath != "/tmp/service-account.json" || gotImpersonate != "test@example.com" {
+		t.Fatalf("factory args = (%q, %q)", gotPath, gotImpersonate)
 	}
 }
 

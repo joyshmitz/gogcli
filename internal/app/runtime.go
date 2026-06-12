@@ -16,6 +16,7 @@ import (
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/forms/v1"
 	"google.golang.org/api/gmail/v1"
+	"google.golang.org/api/keep/v1"
 	"google.golang.org/api/people/v1"
 	"google.golang.org/api/searchconsole/v1"
 	"google.golang.org/api/sheets/v4"
@@ -45,6 +46,7 @@ type (
 	DriveServiceFactory          func(context.Context, string) (*drive.Service, error)
 	FormsServiceFactory          func(context.Context, string) (*forms.Service, error)
 	GmailServiceFactory          func(context.Context, string) (*gmail.Service, error)
+	KeepServiceAccountFactory    func(context.Context, string, string) (*keep.Service, error)
 	PeopleServiceFactory         func(context.Context, string) (*people.Service, error)
 	PhotosServiceFactory         func(context.Context, string) (*googleapi.PhotosClient, error)
 	PhotosPickerServiceFactory   func(context.Context, string) (*googleapi.PhotosPickerClient, error)
@@ -77,6 +79,7 @@ type Services struct {
 	Drive           DriveServiceFactory
 	Forms           FormsServiceFactory
 	Gmail           GmailServiceFactory
+	Keep            KeepServiceAccountFactory
 	PeopleContacts  PeopleServiceFactory
 	PeopleDirectory PeopleServiceFactory
 	PeopleOther     PeopleServiceFactory
