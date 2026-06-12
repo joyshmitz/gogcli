@@ -3,12 +3,18 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
 	"google.golang.org/api/docs/v1"
 )
+
+func newDocsTableOpsTestContext(t *testing.T, svc *docs.Service) context.Context {
+	t.Helper()
+	return withDocsTestService(newCmdRuntimeOutputContext(t, io.Discard, io.Discard), svc)
+}
 
 func TestResolveDocsTableSelector(t *testing.T) {
 	doc := docsTableOpsTestDocument(
@@ -248,9 +254,6 @@ func TestValidateDocsTableRangeCountsMergedCellSpans(t *testing.T) {
 }
 
 func TestDocsTableColumnDeleteAllUsesDescendingDocumentOrder(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	doc := docsTableOpsTestDocument(
 		docsTableOpsTestElement(5, "First", 2, 2),
 		docsTableOpsTestElement(40, "Second", 2, 2),
@@ -271,10 +274,9 @@ func TestDocsTableColumnDeleteAllUsesDescendingDocumentOrder(t *testing.T) {
 		}
 	})
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	cmd := &DocsTableColumnDeleteCmd{}
-	err := runKong(t, cmd, []string{"doc1", "--table", "*", "--col=-1"}, newDocsCmdContext(t), &RootFlags{Account: "a@b.com"})
+	err := runKong(t, cmd, []string{"doc1", "--table", "*", "--col=-1"}, newDocsTableOpsTestContext(t, docSvc), &RootFlags{Account: "a@b.com"})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -293,9 +295,6 @@ func TestDocsTableColumnDeleteAllUsesDescendingDocumentOrder(t *testing.T) {
 }
 
 func TestDocsTableRowInsertPopulatesValues(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	before := docsTableOpsTestDocument(docsTableOpsTestElement(5, "Header", 2, 2))
 	after := docsTableOpsTestDocument(docsTableOpsTestElement(5, "Header", 3, 2))
 	after.RevisionId = "rev-2"
@@ -330,12 +329,11 @@ func TestDocsTableRowInsertPopulatesValues(t *testing.T) {
 		}
 	})
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	cmd := &DocsTableRowInsertCmd{}
 	err := runKong(t, cmd, []string{
 		"doc1", "--table", "*", "--at", "end", "--values-json", `["left","right"]`,
-	}, newDocsCmdContext(t), &RootFlags{Account: "a@b.com"})
+	}, newDocsTableOpsTestContext(t, docSvc), &RootFlags{Account: "a@b.com"})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -357,9 +355,6 @@ func TestDocsTableRowInsertPopulatesValues(t *testing.T) {
 }
 
 func TestDocsTableRowInsertValuesRejectsMultipleSelectedTables(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	doc := docsTableOpsTestDocument(
 		docsTableOpsTestElement(5, "First", 2, 2),
 		docsTableOpsTestElement(40, "Second", 2, 2),
@@ -377,12 +372,11 @@ func TestDocsTableRowInsertValuesRejectsMultipleSelectedTables(t *testing.T) {
 		http.NotFound(w, r)
 	})
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	cmd := &DocsTableRowInsertCmd{}
 	err := runKong(t, cmd, []string{
 		"doc1", "--table", "*", "--at", "end", "--values-json", `["left","right"]`,
-	}, newDocsCmdContext(t), &RootFlags{Account: "a@b.com"})
+	}, newDocsTableOpsTestContext(t, docSvc), &RootFlags{Account: "a@b.com"})
 	if err == nil || !strings.Contains(err.Error(), "exactly one selected table") {
 		t.Fatalf("expected selection-count error, got %v", err)
 	}
@@ -392,9 +386,6 @@ func TestDocsTableRowInsertValuesRejectsMultipleSelectedTables(t *testing.T) {
 }
 
 func TestDocsTableRowInsertValuesRejectsVerticalMergeBoundary(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	doc := docsTableOpsTestDocument(docsTableOpsTestElement(5, "Header", 3, 2))
 	doc.Body.Content[0].Table.TableRows[0].TableCells[0].TableCellStyle = &docs.TableCellStyle{RowSpan: 2}
 	postCount := 0
@@ -410,12 +401,11 @@ func TestDocsTableRowInsertValuesRejectsVerticalMergeBoundary(t *testing.T) {
 		http.NotFound(w, r)
 	})
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	cmd := &DocsTableRowInsertCmd{}
 	err := runKong(t, cmd, []string{
 		"doc1", "--table", "1", "--at", "2", "--values-json", `["left","right"]`,
-	}, newDocsCmdContext(t), &RootFlags{Account: "a@b.com"})
+	}, newDocsTableOpsTestContext(t, docSvc), &RootFlags{Account: "a@b.com"})
 	if err == nil || !strings.Contains(err.Error(), "vertically merged cell") {
 		t.Fatalf("expected vertical merge boundary error, got %v", err)
 	}
@@ -425,9 +415,6 @@ func TestDocsTableRowInsertValuesRejectsVerticalMergeBoundary(t *testing.T) {
 }
 
 func TestDocsTableRowInsertValuesRejectsConcurrentRevision(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	before := docsTableOpsTestDocument(docsTableOpsTestElement(5, "Header", 2, 2))
 	after := docsTableOpsTestDocument(docsTableOpsTestElement(5, "Header", 3, 2))
 	after.RevisionId = "rev-collaborator"
@@ -454,12 +441,11 @@ func TestDocsTableRowInsertValuesRejectsConcurrentRevision(t *testing.T) {
 		}
 	})
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	cmd := &DocsTableRowInsertCmd{}
 	err := runKong(t, cmd, []string{
 		"doc1", "--table", "1", "--at", "end", "--values-json", `["left","right"]`,
-	}, newDocsCmdContext(t), &RootFlags{Account: "a@b.com"})
+	}, newDocsTableOpsTestContext(t, docSvc), &RootFlags{Account: "a@b.com"})
 	if err == nil || !strings.Contains(err.Error(), "document revision changed") {
 		t.Fatalf("expected concurrent revision error, got %v", err)
 	}

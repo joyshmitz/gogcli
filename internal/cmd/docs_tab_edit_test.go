@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -10,8 +9,6 @@ import (
 	"testing"
 
 	"google.golang.org/api/docs/v1"
-
-	"github.com/steipete/gogcli/internal/ui"
 )
 
 func tabsDocWithEndIndex() map[string]any {
@@ -44,9 +41,6 @@ func tabsDocWithEndIndex() map[string]any {
 }
 
 func TestDocsWriteUpdate_WithTab(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	var batchRequests [][]*docs.Request
 	var includeTabsCalls int
 
@@ -76,10 +70,9 @@ func TestDocsWriteUpdate_WithTab(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsCmdContext(t)
+	ctx := withDocsTestService(newCmdRuntimeOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	if err := runKong(t, &DocsWriteCmd{}, []string{"doc1", "--text", "hello", "--tab", "Second"}, ctx, flags); err != nil {
 		t.Fatalf("write replace: %v", err)
@@ -128,18 +121,14 @@ func TestDocsWriteUpdate_WithTab(t *testing.T) {
 }
 
 func TestDocsWriteUpdate_WithTab_TabNotFound(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(tabsDocWithEndIndex())
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsCmdContext(t)
+	ctx := withDocsTestService(newCmdRuntimeOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	err := runKong(t, &DocsWriteCmd{}, []string{"doc1", "--text", "hello", "--tab", "t.missing"}, ctx, flags)
 	if err == nil || !strings.Contains(err.Error(), `tab not found: "t.missing"`) {
@@ -153,9 +142,6 @@ func TestDocsWriteUpdate_WithTab_TabNotFound(t *testing.T) {
 }
 
 func TestDocsEditingCommands_WithTab(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	var batchRequests [][]*docs.Request
 
 	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -180,10 +166,9 @@ func TestDocsEditingCommands_WithTab(t *testing.T) {
 		http.NotFound(w, r)
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsCmdContext(t)
+	ctx := withDocsTestService(newCmdRuntimeOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	if err := runKong(t, &DocsInsertCmd{}, []string{"doc1", "hello", "--index", "5", "--tab", "Second"}, ctx, flags); err != nil {
 		t.Fatalf("insert: %v", err)
@@ -213,9 +198,6 @@ func TestDocsEditingCommands_WithTab(t *testing.T) {
 }
 
 func TestDocsWriteCmd_DeprecatedTabIDFlag(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-
 	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		switch {
@@ -230,16 +212,11 @@ func TestDocsWriteCmd_DeprecatedTabIDFlag(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
 
 	var stderrBuf bytes.Buffer
-	u, err := ui.New(ui.Options{Stdout: io.Discard, Stderr: &stderrBuf, Color: "never"})
-	if err != nil {
-		t.Fatalf("ui.New: %v", err)
-	}
-	ctx := ui.WithUI(context.Background(), u)
+	ctx := withDocsTestService(newCmdRuntimeOutputContext(t, io.Discard, &stderrBuf), docSvc)
 
 	if err := runKong(t, &DocsWriteCmd{}, []string{"doc1", "--text", "hello", "--tab-id", "t.second"}, ctx, flags); err != nil {
 		t.Fatalf("write with --tab-id: %v", err)
