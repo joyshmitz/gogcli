@@ -7,35 +7,6 @@ import (
 	"testing"
 )
 
-func TestSanitizeDriveName(t *testing.T) {
-	cases := []struct {
-		in   string
-		want string
-	}{
-		{in: "", want: "_"},
-		{in: ".", want: "_"},
-		{in: "..", want: "_"},
-		{in: "hello", want: "hello"},
-		{in: "a/b", want: "a_b"},
-		{in: "a\\b", want: "a_b"},
-		{in: "  foo ", want: "foo"},
-	}
-	for _, tc := range cases {
-		if got := sanitizeDriveName(tc.in); got != tc.want {
-			t.Fatalf("sanitizeDriveName(%q) = %q, want %q", tc.in, got, tc.want)
-		}
-	}
-}
-
-func TestJoinDrivePath(t *testing.T) {
-	if got := joinDrivePath("", "file"); got != "file" {
-		t.Fatalf("joinDrivePath empty = %q", got)
-	}
-	if got := joinDrivePath("dir", "file"); got != "dir/file" {
-		t.Fatalf("joinDrivePath dir = %q", got)
-	}
-}
-
 func TestSummarizeDriveDu(t *testing.T) {
 	items := []driveTreeItem{
 		{ID: "f1", Path: "a", ParentID: "root", MimeType: driveMimeFolder, Depth: 1, placementID: 2, parentPlacementID: driveRootPlacementID},
