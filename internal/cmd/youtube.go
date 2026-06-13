@@ -86,23 +86,13 @@ func (c *YouTubeActivitiesListCmd) Run(ctx context.Context, flags *RootFlags) er
 		u.Err().Println("No activities")
 		return nil
 	}
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "KIND\tVIDEO_ID\tTITLE\tPUBLISHED_AT")
-	for _, a := range resp.Items {
-		vidID := ""
-		if a.ContentDetails != nil && a.ContentDetails.Upload != nil {
-			vidID = a.ContentDetails.Upload.VideoId
-		}
-		title := ""
-		if a.Snippet != nil {
-			title = a.Snippet.Title
-		}
-		pubAt := ""
-		if a.Snippet != nil && a.Snippet.PublishedAt != "" {
-			pubAt = a.Snippet.PublishedAt
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", a.Kind, sanitizeTab(vidID), sanitizeTab(title), sanitizeTab(pubAt))
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactYouTubeRows(resp.Items),
+		youtubeActivityColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, resp.NextPageToken)
 	return nil
@@ -169,23 +159,13 @@ func (c *YouTubeVideosListCmd) Run(ctx context.Context, flags *RootFlags) error 
 		u.Err().Println("No videos")
 		return nil
 	}
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ID\tTITLE\tCHANNEL\tVIEWS\tPUBLISHED_AT")
-	for _, v := range resp.Items {
-		title := ""
-		ch := ""
-		views := ""
-		pubAt := ""
-		if v.Snippet != nil {
-			title = v.Snippet.Title
-			ch = v.Snippet.ChannelTitle
-			pubAt = v.Snippet.PublishedAt
-		}
-		if v.Statistics != nil {
-			views = fmt.Sprintf("%d", v.Statistics.ViewCount)
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", v.Id, sanitizeTab(title), sanitizeTab(ch), views, sanitizeTab(pubAt))
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactYouTubeRows(resp.Items),
+		youtubeVideoColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, resp.NextPageToken)
 	return nil
@@ -253,23 +233,13 @@ func (c *YouTubePlaylistsListCmd) Run(ctx context.Context, flags *RootFlags) err
 		u.Err().Println("No playlists")
 		return nil
 	}
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ID\tTITLE\tCHANNEL\tVIDEO_COUNT\tPUBLISHED_AT")
-	for _, p := range resp.Items {
-		title := ""
-		ch := ""
-		pubAt := ""
-		count := int64(0)
-		if p.Snippet != nil {
-			title = p.Snippet.Title
-			ch = p.Snippet.ChannelTitle
-			pubAt = p.Snippet.PublishedAt
-		}
-		if p.ContentDetails != nil {
-			count = p.ContentDetails.ItemCount
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n", p.Id, sanitizeTab(title), sanitizeTab(ch), count, sanitizeTab(pubAt))
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactYouTubeRows(resp.Items),
+		youtubePlaylistColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, resp.NextPageToken)
 	return nil
@@ -328,27 +298,13 @@ func (c *YouTubeCommentsListCmd) Run(ctx context.Context, flags *RootFlags) erro
 		u.Err().Println("No comment threads")
 		return nil
 	}
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ID\tAUTHOR\tTEXT\tLIKE_COUNT\tPUBLISHED_AT")
-	for _, t := range resp.Items {
-		id := t.Id
-		author := ""
-		text := ""
-		likes := int64(0)
-		pubAt := ""
-		if t.Snippet != nil && t.Snippet.TopLevelComment != nil && t.Snippet.TopLevelComment.Snippet != nil {
-			s := t.Snippet.TopLevelComment.Snippet
-			author = s.AuthorDisplayName
-			text = s.TextDisplay
-			likes = s.LikeCount
-			pubAt = s.PublishedAt
-		}
-		text = strings.ReplaceAll(strings.TrimSpace(text), "\n", " ")
-		if len(text) > 60 {
-			text = text[:57] + "..."
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n", id, sanitizeTab(author), sanitizeTab(text), likes, sanitizeTab(pubAt))
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactYouTubeRows(resp.Items),
+		youtubeCommentColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, resp.NextPageToken)
 	return nil
@@ -416,25 +372,13 @@ func (c *YouTubeChannelsListCmd) Run(ctx context.Context, flags *RootFlags) erro
 		u.Err().Println("No channels")
 		return nil
 	}
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ID\tTITLE\tSUBS\tVIDEOS\tVIEWS\tPUBLISHED_AT")
-	for _, ch := range resp.Items {
-		title := ""
-		pubAt := ""
-		subs := ""
-		videos := ""
-		views := ""
-		if ch.Snippet != nil {
-			title = ch.Snippet.Title
-			pubAt = ch.Snippet.PublishedAt
-		}
-		if ch.Statistics != nil {
-			subs = fmt.Sprintf("%d", ch.Statistics.SubscriberCount)
-			videos = fmt.Sprintf("%d", ch.Statistics.VideoCount)
-			views = fmt.Sprintf("%d", ch.Statistics.ViewCount)
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", ch.Id, sanitizeTab(title), subs, videos, views, sanitizeTab(pubAt))
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactYouTubeRows(resp.Items),
+		youtubeChannelColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, resp.NextPageToken)
 	return nil
@@ -505,34 +449,13 @@ func (c *YouTubeSearchListCmd) Run(ctx context.Context, flags *RootFlags) error 
 		u.Err().Println("No results")
 		return nil
 	}
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "KIND\tID\tTITLE\tCHANNEL\tPUBLISHED_AT")
-	for _, item := range resp.Items {
-		id := ""
-		kind := ""
-		if item.Id != nil {
-			switch {
-			case item.Id.VideoId != "":
-				id = item.Id.VideoId
-				kind = "video"
-			case item.Id.ChannelId != "":
-				id = item.Id.ChannelId
-				kind = "channel"
-			case item.Id.PlaylistId != "":
-				id = item.Id.PlaylistId
-				kind = "playlist"
-			}
-		}
-		title := ""
-		ch := ""
-		pubAt := ""
-		if item.Snippet != nil {
-			title = item.Snippet.Title
-			ch = item.Snippet.ChannelTitle
-			pubAt = item.Snippet.PublishedAt
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", kind, id, sanitizeTab(title), sanitizeTab(ch), sanitizeTab(pubAt))
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactYouTubeRows(resp.Items),
+		youtubeSearchColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, resp.NextPageToken)
 	return nil
