@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/api/docs/v1"
 
+	"github.com/steipete/gogcli/internal/docssed"
 	"github.com/steipete/gogcli/internal/ui"
 )
 
@@ -51,41 +52,31 @@ type sedMatch struct {
 // It also handles nth-match filtering and global vs single-match logic.
 func findDocMatches(doc *docs.Document, re *regexp.Regexp, expr sedExpr) []sedMatch {
 	var matches []sedMatch
-
-	var walkContent func(content []*docs.StructuralElement)
-	walkContent = func(content []*docs.StructuralElement) {
-		for _, elem := range content {
-			if elem.Paragraph != nil {
-				for _, pe := range elem.Paragraph.Elements {
-					if pe.TextRun == nil || pe.TextRun.Content == "" {
-						continue
-					}
-					text := pe.TextRun.Content
-					baseIdx := pe.StartIndex
-					limit := -1
-					if !expr.global && expr.nthMatch <= 0 {
-						limit = 1
-					}
-					results := re.FindAllStringSubmatchIndex(text, limit)
-					for _, loc := range results {
-						oldText := text[loc[0]:loc[1]]
-						expanded := re.ReplaceAllString(oldText, expr.replacement)
-						matches = append(matches, classifyMatch(baseIdx, text, loc, oldText, expanded, expr))
-					}
-				}
-			}
-			if elem.Table != nil {
-				for _, row := range elem.Table.TableRows {
-					for _, cell := range row.TableCells {
-						walkContent(cell.Content)
-					}
-				}
-			}
-		}
+	projection := docssed.ProjectDocument(doc)
+	if projection.Legacy == nil {
+		return nil
 	}
-
-	if doc.Body != nil {
-		walkContent(doc.Body.Content)
+	for _, run := range projection.Legacy.TextRuns {
+		if run.Text == "" {
+			continue
+		}
+		limit := -1
+		if !expr.global && expr.nthMatch <= 0 {
+			limit = 1
+		}
+		results := re.FindAllStringSubmatchIndex(run.Text, limit)
+		for _, location := range results {
+			oldText := run.Text[location[0]:location[1]]
+			expanded := re.ReplaceAllString(oldText, expr.replacement)
+			matches = append(matches, classifyMatch(
+				run.StartIndex,
+				run.Text,
+				location,
+				oldText,
+				expanded,
+				expr,
+			))
+		}
 	}
 
 	// If nth-match is set, keep only the Nth occurrence across the whole document

@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/api/docs/v1"
 
+	"github.com/steipete/gogcli/internal/docssed"
 	"github.com/steipete/gogcli/internal/ui"
 )
 
@@ -154,86 +155,16 @@ type ImageSpec struct {
 	Height  int    // in pixels, 0 if not specified
 }
 
-// DocImage represents an image found in the document
-type DocImage struct {
-	ObjectID     string // inline object ID or positioned object ID
-	Index        int64  // position in document
-	Alt          string // alt text if available
-	IsPositioned bool   // true if floating/positioned, false if inline
-}
+// DocImage is the projection-owned image metadata used by the command executor.
+type DocImage = docssed.DocumentImage
 
-// findDocImages walks a document and returns all images with their metadata
+// findDocImages returns first-tab image metadata, preserving current sed behavior.
 func findDocImages(doc *docs.Document) []DocImage {
-	var images []DocImage
-
-	if doc.InlineObjects != nil {
-		// Build a map of inline object IDs to their properties
-		inlineProps := make(map[string]*docs.InlineObjectProperties)
-		for id, obj := range doc.InlineObjects {
-			if obj.InlineObjectProperties != nil {
-				inlineProps[id] = obj.InlineObjectProperties
-			}
-		}
-
-		// Walk document to find inline object elements and their positions
-		var walkContent func(content []*docs.StructuralElement)
-		walkContent = func(content []*docs.StructuralElement) {
-			for _, elem := range content {
-				if elem.Paragraph != nil {
-					for _, pe := range elem.Paragraph.Elements {
-						if pe.InlineObjectElement != nil {
-							objID := pe.InlineObjectElement.InlineObjectId
-							alt := ""
-							if props, ok := inlineProps[objID]; ok && props.EmbeddedObject != nil {
-								alt = props.EmbeddedObject.Title // or Description
-								if alt == "" {
-									alt = props.EmbeddedObject.Description
-								}
-							}
-							images = append(images, DocImage{
-								ObjectID:     objID,
-								Index:        pe.StartIndex,
-								Alt:          alt,
-								IsPositioned: false,
-							})
-						}
-					}
-				}
-				if elem.Table != nil {
-					for _, row := range elem.Table.TableRows {
-						for _, cell := range row.TableCells {
-							walkContent(cell.Content)
-						}
-					}
-				}
-			}
-		}
-
-		if doc.Body != nil {
-			walkContent(doc.Body.Content)
-		}
+	projection := docssed.ProjectDocument(doc)
+	if projection.Legacy == nil {
+		return nil
 	}
-
-	// Also check positioned objects
-	if doc.PositionedObjects != nil {
-		for id, obj := range doc.PositionedObjects {
-			alt := ""
-			if obj.PositionedObjectProperties != nil && obj.PositionedObjectProperties.EmbeddedObject != nil {
-				alt = obj.PositionedObjectProperties.EmbeddedObject.Title
-				if alt == "" {
-					alt = obj.PositionedObjectProperties.EmbeddedObject.Description
-				}
-			}
-			images = append(images, DocImage{
-				ObjectID:     id,
-				Index:        0, // positioned objects don't have a fixed index
-				Alt:          alt,
-				IsPositioned: true,
-			})
-		}
-	}
-
-	return images
+	return projection.Legacy.Images
 }
 
 // matchImages returns images that match the reference pattern

@@ -456,6 +456,38 @@ func TestFindDocImages_PositionedObjects(t *testing.T) {
 	assert.True(t, images[0].IsPositioned)
 }
 
+func TestFindDocImages_DeterministicDocumentOrder(t *testing.T) {
+	doc := &docs.Document{
+		Body: &docs.Body{Content: []*docs.StructuralElement{
+			{
+				StartIndex: 1,
+				EndIndex:   5,
+				Paragraph: &docs.Paragraph{
+					PositionedObjectIds: []string{"positioned-z"},
+					Elements: []*docs.ParagraphElement{{
+						StartIndex:          3,
+						EndIndex:            4,
+						InlineObjectElement: &docs.InlineObjectElement{InlineObjectId: "inline"},
+					}},
+				},
+			},
+		}},
+		PositionedObjects: map[string]docs.PositionedObject{
+			"positioned-z": {},
+			"positioned-a": {},
+		},
+	}
+
+	images := findDocImages(doc)
+	require.Len(t, images, 3)
+	assert.Equal(t, []string{"positioned-z", "inline", "positioned-a"}, []string{
+		images[0].ObjectID,
+		images[1].ObjectID,
+		images[2].ObjectID,
+	})
+	assert.Equal(t, int64(1), images[0].Index)
+}
+
 // --- resolveAlign / resolveBreak edge cases ---
 
 func TestResolveAlign_CaseInsensitive(t *testing.T) {
