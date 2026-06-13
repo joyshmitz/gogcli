@@ -53,6 +53,7 @@ const (
 	keyringBackendSourceConfig  = "config"
 	keyringBackendSourceDefault = "default"
 	keyringBackendAuto          = "auto"
+	keyringBackendKeychain      = "keychain"
 )
 
 func systemOpenOptions(layout config.Layout, store *config.ConfigStore) OpenOptions {
@@ -136,7 +137,7 @@ func allowedBackends(info KeyringBackendInfo) ([]keyring.BackendType, error) {
 	switch info.Value {
 	case "", keyringBackendAuto:
 		return nil, nil
-	case "keychain":
+	case keyringBackendKeychain:
 		return []keyring.BackendType{keyring.KeychainBackend}, nil
 	case "file":
 		return []keyring.BackendType{keyring.FileBackend}, nil
@@ -217,7 +218,7 @@ func shouldUseKeyringTimeout(goos string, backendInfo KeyringBackendInfo, dbusAd
 
 func shouldUseKeyringOperationTimeout(goos string, backendInfo KeyringBackendInfo, dbusAddr string) bool {
 	if goos == goosDarwin {
-		return backendInfo.Value == keyringBackendAuto || backendInfo.Value == "keychain"
+		return backendInfo.Value == keyringBackendAuto || backendInfo.Value == keyringBackendKeychain
 	}
 
 	return goos == goosLinux && backendInfo.Value == keyringBackendAuto && dbusAddr != ""

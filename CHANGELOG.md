@@ -11,6 +11,7 @@
 - Drive: preserve repeated folder placements in tree, inventory, and size summaries; reject cyclic folder graphs instead of collapsing paths or scanning indefinitely.
 - Backup: bind configuration, legacy fallback, and home expansion to the selected runtime layout instead of process-global path state.
 - Classroom: require an archived course before deletion with actionable lifecycle guidance, and prevent live tests from leaving consumer-account courses behind.
+- Classroom: wait for course state changes to become readable before reporting success, so immediate archive-then-delete workflows do not fail on stale state.
 - Forms: validate scale question bounds locally and document the Forms API's accepted minimum and maximum values.
 - Groups and Calendar team: reject consumer accounts and stored user OAuth before Cloud Identity API calls, require an explicit account for identity-based direct-token/ADC searches, keep ADC precedence consistent across services, and provide recovery guidance for service-account, direct-token, and ADC auth.
 - Gmail: bind watch state to the selected runtime state directory and serialize atomic updates across concurrent watch processes.

@@ -305,6 +305,11 @@ Drive hierarchy semantics:
 - `gog classroom courses join <courseId> [--role student|teacher] [--user me]`
 - `gog classroom courses leave <courseId> [--role student|teacher] [--user me]`
 - `gog classroom courses url <courseId...>`
+
+Course state mutations wait for the requested state to become visible through
+the Classroom API before returning success. If Google still serves stale state
+after the bounded retry window, the command exits with retryable code `8`.
+
 - `gog classroom students <courseId> [--max N] [--page TOKEN]`
 - `gog classroom students get <courseId> <userId>`
 - `gog classroom students add <courseId> <userId> [--enrollment-code CODE]`

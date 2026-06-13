@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"google.golang.org/api/classroom/v1"
 
@@ -24,8 +25,8 @@ type ClassroomCoursesCmd struct {
 	Create    ClassroomCoursesCreateCmd    `cmd:"" aliases:"add,new" help:"Create a course"`
 	Update    ClassroomCoursesUpdateCmd    `cmd:"" aliases:"edit,set" help:"Update a course"`
 	Delete    ClassroomCoursesDeleteCmd    `cmd:"" aliases:"rm,del,remove" help:"Delete an archived course"`
-	Archive   ClassroomCoursesArchiveCmd   `cmd:"" aliases:"arch" help:"Archive a course"`
-	Unarchive ClassroomCoursesUnarchiveCmd `cmd:"" aliases:"unarch,restore" help:"Unarchive a course"`
+	Archive   ClassroomCoursesArchiveCmd   `cmd:"" aliases:"arch" help:"Archive a course and wait until the state is visible"`
+	Unarchive ClassroomCoursesUnarchiveCmd `cmd:"" aliases:"unarch,restore" help:"Unarchive a course and wait until the state is visible"`
 	Join      ClassroomCoursesJoinCmd      `cmd:"" aliases:"enroll" help:"Join a course"`
 	Leave     ClassroomCoursesLeaveCmd     `cmd:"" aliases:"unenroll" help:"Leave a course"`
 	URL       ClassroomCoursesURLCmd       `cmd:"" name:"url" aliases:"link" help:"Print Classroom web URLs for courses"`
@@ -280,6 +281,12 @@ func (c *ClassroomCoursesUpdateCmd) Run(ctx context.Context, flags *RootFlags) e
 	if err != nil {
 		return wrapClassroomError(err)
 	}
+	if plan.Course.CourseState != "" {
+		updated, err = waitForClassroomCourseState(ctx, svc, plan.CourseID, plan.Course.CourseState)
+		if err != nil {
+			return err
+		}
+	}
 
 	if outfmt.IsJSON(ctx) {
 		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{"course": updated})
@@ -409,9 +416,12 @@ func updateCourseState(ctx context.Context, flags *RootFlags, courseID, state st
 		return wrapClassroomError(err)
 	}
 
-	updated, err := svc.Courses.Patch(courseID, course).UpdateMask("courseState").Context(ctx).Do()
-	if err != nil {
+	if _, err = svc.Courses.Patch(courseID, course).UpdateMask("courseState").Context(ctx).Do(); err != nil {
 		return wrapClassroomError(err)
+	}
+	updated, err := waitForClassroomCourseState(ctx, svc, courseID, state)
+	if err != nil {
+		return err
 	}
 
 	if outfmt.IsJSON(ctx) {
@@ -420,6 +430,82 @@ func updateCourseState(ctx context.Context, flags *RootFlags, courseID, state st
 	u.Out().Linef("id\t%s", updated.Id)
 	u.Out().Linef("state\t%s", updated.CourseState)
 	return nil
+}
+
+func waitForClassroomCourseState(
+	ctx context.Context,
+	svc *classroom.Service,
+	courseID string,
+	wantState string,
+) (*classroom.Course, error) {
+	return pollClassroomCourseState(
+		ctx,
+		courseID,
+		wantState,
+		defaultClassroomCourseStateVisibilityDelays(),
+		waitForPollInterval,
+		func(ctx context.Context) (*classroom.Course, error) {
+			return svc.Courses.Get(courseID).Context(ctx).Do()
+		},
+	)
+}
+
+func defaultClassroomCourseStateVisibilityDelays() []time.Duration {
+	return []time.Duration{
+		0,
+		200 * time.Millisecond,
+		500 * time.Millisecond,
+		time.Second,
+		2 * time.Second,
+		3 * time.Second,
+		4 * time.Second,
+		5 * time.Second,
+	}
+}
+
+func pollClassroomCourseState(
+	ctx context.Context,
+	courseID string,
+	wantState string,
+	delays []time.Duration,
+	wait func(context.Context, time.Duration) error,
+	fetch func(context.Context) (*classroom.Course, error),
+) (*classroom.Course, error) {
+	var lastState string
+	for _, delay := range delays {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if delay > 0 {
+			if err := wait(ctx, delay); err != nil {
+				return nil, err
+			}
+		}
+
+		course, err := fetch(ctx)
+		if err != nil {
+			return nil, wrapClassroomError(err)
+		}
+		if course != nil {
+			lastState = course.CourseState
+			if lastState == wantState {
+				return course, nil
+			}
+		}
+	}
+
+	if lastState == "" {
+		lastState = "(not returned)"
+	}
+	return nil, &ExitError{
+		Code: exitCodeRetryable,
+		Err: fmt.Errorf(
+			"course %s update was accepted, but reads still show state %s instead of %s; retry shortly",
+			courseID,
+			lastState,
+			wantState,
+		),
+	}
 }
 
 type ClassroomCoursesJoinCmd struct {

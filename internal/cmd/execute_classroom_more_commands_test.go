@@ -14,6 +14,7 @@ import (
 )
 
 func TestExecute_ClassroomMoreCommands_JSON(t *testing.T) {
+	courseState := "ACTIVE"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON := func(data any) {
 			w.Header().Set("Content-Type", "application/json")
@@ -382,7 +383,7 @@ func TestExecute_ClassroomMoreCommands_JSON(t *testing.T) {
 		case strings.Contains(path, "/courses/"):
 			switch r.Method {
 			case http.MethodGet:
-				state := "ACTIVE"
+				state := courseState
 				if strings.HasSuffix(path, "/c-delete") {
 					state = "ARCHIVED"
 				}
@@ -393,7 +394,14 @@ func TestExecute_ClassroomMoreCommands_JSON(t *testing.T) {
 				if mask != "name,courseState" && mask != "courseState" {
 					t.Fatalf("unexpected updateMask %q", mask)
 				}
-				writeJSON(map[string]any{"id": "c1", "name": "Updated Course", "courseState": "ARCHIVED"})
+				var body classroom.Course
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatalf("decode course patch: %v", err)
+				}
+				if body.CourseState != "" {
+					courseState = body.CourseState
+				}
+				writeJSON(map[string]any{"id": "c1", "name": "Updated Course", "courseState": courseState})
 				return
 			case http.MethodDelete:
 				w.WriteHeader(http.StatusNoContent)

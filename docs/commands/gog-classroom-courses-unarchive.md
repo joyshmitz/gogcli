@@ -2,7 +2,7 @@
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Unarchive a course
+Unarchive a course and wait until the state is visible
 
 ## Usage
 
