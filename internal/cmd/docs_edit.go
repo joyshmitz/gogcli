@@ -632,15 +632,23 @@ func (c *DocsUpdateCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 	if text == "" {
 		return usage("empty text")
 	}
-	at, placementErr := c.validatePlacement(kctx)
-	if placementErr != nil {
-		return placementErr
-	}
-
-	replaceRange, replacing, err := docsedit.ParseRange(c.ReplaceRange)
+	placement, err := docsedit.PlanUpdatePlacement(docsedit.UpdatePlacementOptions{
+		Index:         c.Index,
+		IndexProvided: flagProvided(kctx, "index"),
+		ReplaceRange:  c.ReplaceRange,
+		Anchor: docsedit.AnchorOptions{
+			Text:       c.At,
+			Provided:   flagProvided(kctx, "at"),
+			Occurrence: c.Occurrence,
+			MatchCase:  c.MatchCase,
+		},
+	})
 	if err != nil {
 		return usage(err.Error())
 	}
+	at := placement.Anchor.Text
+	replacing := placement.Kind == docsedit.PlacementRange
+	replaceRange := placement.Range
 	replaceStart, replaceEnd := replaceRange.Start, replaceRange.End
 
 	tab, tabErr := resolveTabArg(ctx, c.Tab, c.TabID)
@@ -667,20 +675,26 @@ func (c *DocsUpdateCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 		return err
 	}
 
-	insertIndex := c.Index
-	anchor, anchorReplacing, anchorErr := c.resolveAtAnchor(ctx, svc, id, at)
-	if anchorErr != nil {
-		return anchorErr
-	}
-	if anchorReplacing {
+	insertIndex := placement.Index
+	var anchor *docsResolvedAtAnchor
+	switch placement.Kind {
+	case docsedit.PlacementAnchor:
+		resolved, anchorErr := resolveDocsAtAnchor(ctx, svc, id, docsAtAnchorFlags{
+			At:         placement.Anchor.Text,
+			Occurrence: placement.Anchor.Occurrence,
+			MatchCase:  placement.Anchor.MatchCase,
+			Tab:        c.Tab,
+		})
+		if anchorErr != nil {
+			return anchorErr
+		}
+		anchor = &resolved
 		replaceStart = anchor.Match.StartIndex
 		replaceEnd = anchor.Match.EndIndex
 		replacing = true
 		insertIndex = replaceStart
 		c.Tab = anchor.Match.TabID
-	}
-	switch {
-	case replacing:
+	case docsedit.PlacementRange:
 		insertIndex = replaceStart
 		if c.Tab != "" {
 			tabID, tabErr := resolveDocsTabID(ctx, svc, id, c.Tab)
@@ -689,19 +703,21 @@ func (c *DocsUpdateCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 			}
 			c.Tab = tabID
 		}
-	case insertIndex <= 0:
+	case docsedit.PlacementEnd:
 		endIndex, tabID, endErr := docsTargetEndIndexAndTabID(ctx, svc, id, c.Tab)
 		if endErr != nil {
 			return endErr
 		}
 		c.Tab = tabID
 		insertIndex = docsAppendIndex(endIndex)
-	case c.Tab != "":
-		tabID, tabErr := resolveDocsTabID(ctx, svc, id, c.Tab)
-		if tabErr != nil {
-			return tabErr
+	case docsedit.PlacementIndex:
+		if c.Tab != "" {
+			tabID, tabErr := resolveDocsTabID(ctx, svc, id, c.Tab)
+			if tabErr != nil {
+				return tabErr
+			}
+			c.Tab = tabID
 		}
-		c.Tab = tabID
 	}
 
 	requestCount := 0
@@ -823,23 +839,6 @@ func (c *DocsUpdateCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 	return nil
 }
 
-func (c *DocsUpdateCmd) validatePlacement(kctx *kong.Context) (string, error) {
-	if flagProvided(kctx, "index") && c.Index <= 0 {
-		return "", usage("invalid --index (must be >= 1)")
-	}
-	if flagProvided(kctx, "index") && strings.TrimSpace(c.ReplaceRange) != "" {
-		return "", usage("--index cannot be combined with --replace-range")
-	}
-	if err := validateDocsAtAnchorFlags(docsAtAnchorFlags{At: c.At, AtProvided: flagProvided(kctx, "at"), Occurrence: c.Occurrence, MatchCase: c.MatchCase}); err != nil {
-		return "", err
-	}
-	at := c.At
-	if at != "" && (flagProvided(kctx, "index") || strings.TrimSpace(c.ReplaceRange) != "") {
-		return "", usage("--at cannot be combined with --index or --replace-range")
-	}
-	return at, nil
-}
-
 func (c *DocsUpdateCmd) dryRunPayload(docID string, written int, replacing bool, replaceStart, replaceEnd int64, at string) map[string]any {
 	var index any = docsAtIndexEnd
 	switch {
@@ -864,22 +863,6 @@ func (c *DocsUpdateCmd) dryRunPayload(docID string, written int, replacing bool,
 	}
 	addDocsAtAnchorDryRunPayload(payload, docsAtAnchorFlags{At: at, Occurrence: c.Occurrence, MatchCase: c.MatchCase})
 	return payload
-}
-
-func (c *DocsUpdateCmd) resolveAtAnchor(ctx context.Context, svc *docs.Service, docID, at string) (*docsResolvedAtAnchor, bool, error) {
-	if at == "" {
-		return nil, false, nil
-	}
-	match, err := resolveDocsAtAnchor(ctx, svc, docID, docsAtAnchorFlags{
-		At:         at,
-		Occurrence: c.Occurrence,
-		MatchCase:  c.MatchCase,
-		Tab:        c.Tab,
-	})
-	if err != nil {
-		return nil, false, err
-	}
-	return &match, true, nil
 }
 
 func anchorDocumentForMarkdownReplace(anchor *docsResolvedAtAnchor) *docs.Document {
@@ -915,16 +898,19 @@ func (c *DocsInsertCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 	if content == "" {
 		return usage("no content provided (use argument, --file, or stdin)")
 	}
-	if c.Index != nil && *c.Index < 1 {
-		return usage("--index must be >= 1 (index 0 is reserved)")
+	placement, err := docsedit.PlanInsertPlacement(docsedit.InsertPlacementOptions{
+		Index: c.Index,
+		Anchor: docsedit.AnchorOptions{
+			Text:       c.At,
+			Provided:   flagProvided(kctx, "at"),
+			Occurrence: c.Occurrence,
+			MatchCase:  c.MatchCase,
+		},
+	})
+	if err != nil {
+		return usage(err.Error())
 	}
-	if anchorErr := validateDocsAtAnchorFlags(docsAtAnchorFlags{At: c.At, AtProvided: flagProvided(kctx, "at"), Occurrence: c.Occurrence, MatchCase: c.MatchCase}); anchorErr != nil {
-		return anchorErr
-	}
-	at := c.At
-	if at != "" && c.Index != nil {
-		return usage("--at and --index are mutually exclusive")
-	}
+	at := placement.Anchor.Text
 
 	tab, tabErr := resolveTabArg(ctx, c.Tab, c.TabID)
 	if tabErr != nil {
@@ -937,12 +923,12 @@ func (c *DocsInsertCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 		"tab":        c.Tab,
 		"batch":      c.Batch,
 	}
-	switch {
-	case c.Index != nil:
-		dryRunPayload["atIndex"] = *c.Index
-	case at != "":
+	switch placement.Kind {
+	case docsedit.PlacementAnchor:
 		dryRunPayload["atIndex"] = docsAtIndexAnchorStart
 		addDocsAtAnchorDryRunPayload(dryRunPayload, docsAtAnchorFlags{At: at, Occurrence: c.Occurrence, MatchCase: c.MatchCase})
+	case docsedit.PlacementIndex:
+		dryRunPayload["atIndex"] = placement.Index
 	default:
 		dryRunPayload["atIndex"] = docsAtIndexEnd
 	}
@@ -964,12 +950,12 @@ func (c *DocsInsertCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 
 	var insertIndex int64
 	var anchor *docsResolvedAtAnchor
-	switch {
-	case at != "":
+	switch placement.Kind {
+	case docsedit.PlacementAnchor:
 		match, anchorErr := resolveDocsAtAnchor(ctx, svc, docID, docsAtAnchorFlags{
-			At:         at,
-			Occurrence: c.Occurrence,
-			MatchCase:  c.MatchCase,
+			At:         placement.Anchor.Text,
+			Occurrence: placement.Anchor.Occurrence,
+			MatchCase:  placement.Anchor.MatchCase,
 			Tab:        c.Tab,
 		})
 		if anchorErr != nil {
@@ -978,8 +964,8 @@ func (c *DocsInsertCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 		anchor = &match
 		insertIndex = match.Match.StartIndex
 		c.Tab = match.Match.TabID
-	case c.Index != nil:
-		insertIndex = *c.Index
+	case docsedit.PlacementIndex:
+		insertIndex = placement.Index
 		if c.Tab != "" {
 			tabID, tabErr := resolveDocsTabID(ctx, svc, docID, c.Tab)
 			if tabErr != nil {
@@ -987,7 +973,7 @@ func (c *DocsInsertCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 			}
 			c.Tab = tabID
 		}
-	default:
+	case docsedit.PlacementEnd:
 		endIndex, tabID, endErr := docsTargetEndIndexAndTabID(ctx, svc, docID, c.Tab)
 		if endErr != nil {
 			return endErr
@@ -1045,23 +1031,20 @@ func (c *DocsDeleteCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 	if docID == "" {
 		return usage("empty docId")
 	}
-	if anchorErr := validateDocsAtAnchorFlags(docsAtAnchorFlags{At: c.At, AtProvided: flagProvided(kctx, "at"), Occurrence: c.Occurrence, MatchCase: c.MatchCase}); anchorErr != nil {
-		return anchorErr
+	placement, err := docsedit.PlanRangePlacement(docsedit.RangePlacementOptions{
+		Start: c.Start,
+		End:   c.End,
+		Anchor: docsedit.AnchorOptions{
+			Text:       c.At,
+			Provided:   flagProvided(kctx, "at"),
+			Occurrence: c.Occurrence,
+			MatchCase:  c.MatchCase,
+		},
+	})
+	if err != nil {
+		return usage(err.Error())
 	}
-	at := c.At
-	hasNumericRange := c.Start != nil || c.End != nil
-	if at != "" && hasNumericRange {
-		return usage("--at cannot be combined with --start or --end")
-	}
-	if at == "" && (c.Start == nil || c.End == nil) {
-		return usage("provide --at or both --start and --end")
-	}
-	if c.Start != nil && *c.Start < 1 {
-		return usage("--start must be >= 1")
-	}
-	if c.Start != nil && c.End != nil && *c.End <= *c.Start {
-		return usage("--end must be greater than --start")
-	}
+	at := placement.Anchor.Text
 
 	tab, tabErr := resolveTabArg(ctx, c.Tab, c.TabID)
 	if tabErr != nil {
@@ -1077,11 +1060,11 @@ func (c *DocsDeleteCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 		"batch":       c.Batch,
 	}
 	addDocsAtAnchorDryRunPayload(dryRunPayload, docsAtAnchorFlags{At: at, Occurrence: c.Occurrence, MatchCase: c.MatchCase})
-	if err := dryRunExit(ctx, flags, "docs.delete", dryRunPayload); err != nil {
-		return err
+	if dryRunErr := dryRunExit(ctx, flags, "docs.delete", dryRunPayload); dryRunErr != nil {
+		return dryRunErr
 	}
-	if err := validateDocsBatchTarget(ctx, flags, c.Batch, docID); err != nil {
-		return err
+	if batchErr := validateDocsBatchTarget(ctx, flags, c.Batch, docID); batchErr != nil {
+		return batchErr
 	}
 
 	svc, err := requireDocsService(ctx, flags)
@@ -1094,11 +1077,11 @@ func (c *DocsDeleteCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 	}
 	var start, end int64
 	var anchor *docsResolvedAtAnchor
-	if at != "" {
+	if placement.Kind == docsedit.PlacementAnchor {
 		match, anchorErr := resolveDocsAtAnchor(ctx, svc, docID, docsAtAnchorFlags{
-			At:         at,
-			Occurrence: c.Occurrence,
-			MatchCase:  c.MatchCase,
+			At:         placement.Anchor.Text,
+			Occurrence: placement.Anchor.Occurrence,
+			MatchCase:  placement.Anchor.MatchCase,
 			Tab:        c.Tab,
 		})
 		if anchorErr != nil {
@@ -1109,10 +1092,10 @@ func (c *DocsDeleteCmd) Run(ctx context.Context, kctx *kong.Context, flags *Root
 		end = match.Match.EndIndex
 		c.Tab = match.Match.TabID
 	} else {
-		start = *c.Start
-		end = *c.End
+		start = placement.Range.Start
+		end = placement.Range.End
 	}
-	if at == "" && c.Tab != "" {
+	if placement.Kind == docsedit.PlacementRange && c.Tab != "" {
 		tabID, tabErr := resolveDocsTabID(ctx, svc, docID, c.Tab)
 		if tabErr != nil {
 			return tabErr

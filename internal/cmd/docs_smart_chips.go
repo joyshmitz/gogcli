@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 	"google.golang.org/api/docs/v1"
 
+	"github.com/steipete/gogcli/internal/docsedit"
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -182,23 +183,15 @@ func runDocsSingleInsert(ctx context.Context, flags *RootFlags, action string, l
 	if docID == "" {
 		return usage("empty docId")
 	}
-	if loc.atEnd && loc.index != nil {
-		return usage("--at-end and --index are mutually exclusive")
-	}
-	if loc.index != nil && *loc.index < 1 {
-		return usage("--index must be >= 1 (index 0 is reserved)")
-	}
-	if anchorErr := validateDocsAtAnchorFlags(docsAtAnchorFlags{At: loc.at, AtProvided: loc.atProvided, Occurrence: loc.occurrence, MatchCase: loc.matchCase}); anchorErr != nil {
-		return anchorErr
-	}
-	if loc.at != "" && (loc.atEnd || loc.index != nil) {
-		return usage("--at cannot be combined with --at-end or --index")
-	}
-	if err := dryRunDocsSingleInsert(ctx, flags, action, loc, payload); err != nil {
+	placement, err := planDocsInsertLocation(loc)
+	if err != nil {
 		return err
 	}
-	if err := validateDocsBatchTarget(ctx, flags, loc.batch, docID); err != nil {
-		return err
+	if dryRunErr := dryRunDocsSingleInsert(ctx, flags, action, loc, payload); dryRunErr != nil {
+		return dryRunErr
+	}
+	if batchErr := validateDocsBatchTarget(ctx, flags, loc.batch, docID); batchErr != nil {
+		return batchErr
 	}
 
 	svc, err := requireDocsService(ctx, flags)
@@ -209,7 +202,7 @@ func runDocsSingleInsert(ctx context.Context, flags *RootFlags, action string, l
 	if err != nil {
 		return err
 	}
-	insertIndex, tabID, matched, err := resolveDocsInsertLocation(ctx, svc, docID, loc)
+	insertIndex, tabID, matched, err := resolveDocsInsertLocation(ctx, svc, docID, loc, placement)
 	if err != nil {
 		return err
 	}
@@ -267,67 +260,78 @@ func dryRunDocsSingleInsert(ctx context.Context, flags *RootFlags, action string
 	if docID == "" {
 		return usage("empty docId")
 	}
-	if loc.atEnd && loc.index != nil {
-		return usage("--at-end and --index are mutually exclusive")
-	}
-	if loc.index != nil && *loc.index < 1 {
-		return usage("--index must be >= 1 (index 0 is reserved)")
-	}
-	if anchorErr := validateDocsAtAnchorFlags(docsAtAnchorFlags{At: loc.at, AtProvided: loc.atProvided, Occurrence: loc.occurrence, MatchCase: loc.matchCase}); anchorErr != nil {
-		return anchorErr
-	}
-	at := loc.at
-	if at != "" && (loc.atEnd || loc.index != nil) {
-		return usage("--at cannot be combined with --at-end or --index")
+	placement, err := planDocsInsertLocation(loc)
+	if err != nil {
+		return err
 	}
 	dryRunPayload := map[string]any{"documentId": docID, "tab": loc.tab, "batch": loc.batch}
 	for k, v := range payload {
 		dryRunPayload[k] = v
 	}
-	switch {
-	case at != "":
+	switch placement.Kind {
+	case docsedit.PlacementAnchor:
 		dryRunPayload["atIndex"] = docsAtIndexAnchorStart
-		addDocsAtAnchorDryRunPayload(dryRunPayload, docsAtAnchorFlags{At: at, Occurrence: loc.occurrence, MatchCase: loc.matchCase})
+		addDocsAtAnchorDryRunPayload(dryRunPayload, docsAtAnchorFlags{At: placement.Anchor.Text, Occurrence: placement.Anchor.Occurrence, MatchCase: placement.Anchor.MatchCase})
 		if loc.replaceAt {
 			dryRunPayload["replaceAt"] = true
 		}
-	case loc.atEnd || loc.index == nil:
+	case docsedit.PlacementEnd:
 		dryRunPayload["atIndex"] = docsAtIndexEnd
-	default:
-		dryRunPayload["atIndex"] = *loc.index
+	case docsedit.PlacementIndex:
+		dryRunPayload["atIndex"] = placement.Index
 	}
 	return dryRunExit(ctx, flags, action, dryRunPayload)
 }
 
-func resolveDocsInsertLocation(ctx context.Context, svc *docs.Service, docID string, loc docsInsertLocationFlags) (int64, string, *docsResolvedAtAnchor, error) {
-	if loc.at != "" {
-		match, err := resolveDocsAtAnchor(ctx, svc, docID, docsAtAnchorFlags{
-			At:         loc.at,
+func planDocsInsertLocation(loc docsInsertLocationFlags) (docsedit.Placement, error) {
+	placement, err := docsedit.PlanEndInsertPlacement(docsedit.EndInsertPlacementOptions{
+		Index: loc.index,
+		AtEnd: loc.atEnd,
+		Anchor: docsedit.AnchorOptions{
+			Text:       loc.at,
+			Provided:   loc.atProvided,
 			Occurrence: loc.occurrence,
 			MatchCase:  loc.matchCase,
+		},
+	})
+	if err != nil {
+		return docsedit.Placement{}, usage(err.Error())
+	}
+	return placement, nil
+}
+
+func resolveDocsInsertLocation(ctx context.Context, svc *docs.Service, docID string, loc docsInsertLocationFlags, placement docsedit.Placement) (int64, string, *docsResolvedAtAnchor, error) {
+	switch placement.Kind {
+	case docsedit.PlacementAnchor:
+		match, err := resolveDocsAtAnchor(ctx, svc, docID, docsAtAnchorFlags{
+			At:         placement.Anchor.Text,
+			Occurrence: placement.Anchor.Occurrence,
+			MatchCase:  placement.Anchor.MatchCase,
 			Tab:        loc.tab,
 		})
 		if err != nil {
 			return 0, "", nil, err
 		}
 		return match.Match.StartIndex, match.Match.TabID, &match, nil
-	}
-	if loc.atEnd || loc.index == nil {
+	case docsedit.PlacementEnd:
 		endIndex, tabID, err := docsTargetEndIndexAndTabID(ctx, svc, docID, loc.tab)
 		if err != nil {
 			return 0, "", nil, err
 		}
 		return docsAppendIndex(endIndex), tabID, nil, nil
-	}
-	tabID := ""
-	if strings.TrimSpace(loc.tab) != "" {
-		resolved, err := resolveDocsTabID(ctx, svc, docID, loc.tab)
-		if err != nil {
-			return 0, "", nil, err
+	case docsedit.PlacementIndex:
+		tabID := ""
+		if strings.TrimSpace(loc.tab) != "" {
+			resolved, err := resolveDocsTabID(ctx, svc, docID, loc.tab)
+			if err != nil {
+				return 0, "", nil, err
+			}
+			tabID = resolved
 		}
-		tabID = resolved
+		return placement.Index, tabID, nil, nil
+	default:
+		return 0, "", nil, fmt.Errorf("unsupported Docs insert placement: %d", placement.Kind)
 	}
-	return *loc.index, tabID, nil, nil
 }
 
 func setDocsInsertRequestLocation(req *docs.Request, index int64, tabID string) {

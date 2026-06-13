@@ -8,6 +8,7 @@ import (
 	"github.com/alecthomas/kong"
 	"google.golang.org/api/docs/v1"
 
+	"github.com/steipete/gogcli/internal/docsedit"
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -35,46 +36,46 @@ func (c *DocsInsertPageBreakCmd) Run(ctx context.Context, kctx *kong.Context, fl
 	if docID == "" {
 		return usage("empty docId")
 	}
-	if c.AtEnd && c.Index != nil {
-		return usage("--at-end and --index are mutually exclusive")
+	placement, err := docsedit.PlanEndInsertPlacement(docsedit.EndInsertPlacementOptions{
+		Index: c.Index,
+		AtEnd: c.AtEnd,
+		Anchor: docsedit.AnchorOptions{
+			Text:       c.At,
+			Provided:   flagProvided(kctx, "at"),
+			Occurrence: c.Occurrence,
+			MatchCase:  c.MatchCase,
+		},
+	})
+	if err != nil {
+		return usage(err.Error())
 	}
-	if c.Index != nil && *c.Index < 1 {
-		return usage("--index must be >= 1 (index 0 is reserved)")
-	}
-	if anchorErr := validateDocsAtAnchorFlags(docsAtAnchorFlags{At: c.At, AtProvided: flagProvided(kctx, "at"), Occurrence: c.Occurrence, MatchCase: c.MatchCase}); anchorErr != nil {
-		return anchorErr
-	}
-	at := c.At
-	if at != "" && (c.AtEnd || c.Index != nil) {
-		return usage("--at cannot be combined with --at-end or --index")
-	}
+	at := placement.Anchor.Text
 
 	tab, tabErr := resolveTabArg(ctx, c.Tab, c.TabID)
 	if tabErr != nil {
 		return tabErr
 	}
 	c.Tab = tab
-	resolveEnd := at == "" && (c.AtEnd || c.Index == nil)
 
 	dryRunPayload := map[string]any{
 		"documentId": docID,
 		"tab":        c.Tab,
 		"batch":      c.Batch,
 	}
-	switch {
-	case at != "":
+	switch placement.Kind {
+	case docsedit.PlacementAnchor:
 		dryRunPayload["atIndex"] = docsAtIndexAnchorStart
 		addDocsAtAnchorDryRunPayload(dryRunPayload, docsAtAnchorFlags{At: at, Occurrence: c.Occurrence, MatchCase: c.MatchCase})
-	case resolveEnd:
+	case docsedit.PlacementEnd:
 		dryRunPayload["atIndex"] = docsAtIndexEnd
-	default:
-		dryRunPayload["atIndex"] = *c.Index
+	case docsedit.PlacementIndex:
+		dryRunPayload["atIndex"] = placement.Index
 	}
 	if dryRunErr := dryRunExit(ctx, flags, "docs.insert-page-break", dryRunPayload); dryRunErr != nil {
 		return dryRunErr
 	}
-	if err := validateDocsBatchTarget(ctx, flags, c.Batch, docID); err != nil {
-		return err
+	if batchErr := validateDocsBatchTarget(ctx, flags, c.Batch, docID); batchErr != nil {
+		return batchErr
 	}
 
 	svc, err := requireDocsService(ctx, flags)
@@ -88,12 +89,12 @@ func (c *DocsInsertPageBreakCmd) Run(ctx context.Context, kctx *kong.Context, fl
 
 	var insertIndex int64
 	var anchor *docsResolvedAtAnchor
-	switch {
-	case at != "":
+	switch placement.Kind {
+	case docsedit.PlacementAnchor:
 		match, anchorErr := resolveDocsAtAnchor(ctx, svc, docID, docsAtAnchorFlags{
-			At:         at,
-			Occurrence: c.Occurrence,
-			MatchCase:  c.MatchCase,
+			At:         placement.Anchor.Text,
+			Occurrence: placement.Anchor.Occurrence,
+			MatchCase:  placement.Anchor.MatchCase,
 			Tab:        c.Tab,
 		})
 		if anchorErr != nil {
@@ -105,15 +106,15 @@ func (c *DocsInsertPageBreakCmd) Run(ctx context.Context, kctx *kong.Context, fl
 		anchor = &match
 		insertIndex = match.Match.StartIndex
 		c.Tab = match.Match.TabID
-	case resolveEnd:
+	case docsedit.PlacementEnd:
 		endIndex, tabID, endErr := docsTargetEndIndexAndTabID(ctx, svc, docID, c.Tab)
 		if endErr != nil {
 			return endErr
 		}
 		c.Tab = tabID
 		insertIndex = docsAppendIndex(endIndex)
-	default:
-		insertIndex = *c.Index
+	case docsedit.PlacementIndex:
+		insertIndex = placement.Index
 		if c.Tab != "" {
 			tabID, tabErr := resolveDocsTabID(ctx, svc, docID, c.Tab)
 			if tabErr != nil {

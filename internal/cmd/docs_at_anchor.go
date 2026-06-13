@@ -26,31 +26,21 @@ type docsResolvedAtAnchor struct {
 
 const docsAtIndexAnchorStart = "at:start"
 
-func validateDocsAtAnchorFlags(anchor docsAtAnchorFlags) error {
-	if anchor.At == "" {
-		if anchor.AtProvided {
-			return usage("empty --at")
-		}
-		if anchor.Occurrence != nil {
-			return usage("--occurrence requires --at")
-		}
-		if anchor.MatchCase {
-			return usage("--match-case requires --at")
-		}
-		return nil
+func (a docsAtAnchorFlags) options() docsedit.AnchorOptions {
+	return docsedit.AnchorOptions{
+		Text:       a.At,
+		Provided:   a.AtProvided,
+		Occurrence: a.Occurrence,
+		MatchCase:  a.MatchCase,
 	}
-	if anchor.Occurrence != nil && *anchor.Occurrence <= 0 {
-		return usage("--occurrence must be > 0")
-	}
-	return nil
 }
 
 func resolveDocsAtAnchor(ctx context.Context, svc *docs.Service, docID string, anchor docsAtAnchorFlags) (docsResolvedAtAnchor, error) {
 	if anchor.At == "" {
 		return docsResolvedAtAnchor{}, usage("empty --at")
 	}
-	if err := validateDocsAtAnchorFlags(anchor); err != nil {
-		return docsResolvedAtAnchor{}, err
+	if err := docsedit.ValidateAnchor(anchor.options()); err != nil {
+		return docsResolvedAtAnchor{}, usage(err.Error())
 	}
 
 	loaded, err := loadDocsTargetDocument(ctx, svc, docID, anchor.Tab)
