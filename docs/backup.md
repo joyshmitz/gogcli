@@ -70,6 +70,19 @@ gog backup export --no-pull --out ~/Library/CloudStorage/Dropbox/backup/gog --gm
 Use `--no-push` on `init` or `push` to commit locally without pushing to the
 remote.
 
+`status`, `verify`, `cat`, and `export` pull an existing repository or clone the
+configured remote before reading. Use `--no-pull` to read local state directly.
+Read commands never initialize a new Git repository when the repository is
+missing or a clone fails.
+With `--no-input`, backup Git operations disable credential/UI prompts and SSH
+password prompts; failed read-side clones leave the configured path untouched.
+Pre-created empty repository directories are supported, including mounted
+paths; failed clones clean their partial contents while preserving the directory.
+Git errors redact credentials embedded in remote URLs before printing command
+arguments or captured diagnostics.
+With `--dry-run`, all four read commands print their resolved repository/pull
+plan without cloning, pulling, decrypting, or writing plaintext output.
+
 Supported services:
 
 - `gmail`: labels and raw MIME messages. Fetched raw messages are cached under
