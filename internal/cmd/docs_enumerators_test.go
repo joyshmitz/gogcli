@@ -203,6 +203,74 @@ func TestDocsHeadingsAndParagraphsFilters(t *testing.T) {
 	}
 }
 
+func TestDocsHeadingsAndParagraphsJSONIncludeHeadingID(t *testing.T) {
+	t.Parallel()
+
+	response := map[string]any{
+		"documentId": "doc1",
+		"body": map[string]any{"content": []any{
+			rawStyledParagraphWithHeadingID(1, 12, "HEADING_1", "h.section", "Section\n"),
+			rawStyledParagraph(12, 20, "NORMAL_TEXT", "Body\n"),
+		}},
+	}
+	srv := newDocsRawTestServer(t, 0, response)
+	defer srv.Close()
+	svc := newMockDocsService(t, srv)
+
+	var output bytes.Buffer
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, &output, io.Discard), svc)
+	if err := runKong(t, &DocsHeadingsListCmd{}, []string{"doc1"}, ctx, &RootFlags{Account: "a@b.com"}); err != nil {
+		t.Fatalf("headings run: %v", err)
+	}
+	var headings struct {
+		Headings []docsParagraphListItem `json:"headings"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &headings); err != nil {
+		t.Fatalf("unmarshal headings: %v\n%s", err, output.String())
+	}
+	if len(headings.Headings) != 1 || headings.Headings[0].HeadingID != "h.section" {
+		t.Fatalf("headings = %#v", headings.Headings)
+	}
+	var rawHeadings struct {
+		Headings []map[string]json.RawMessage `json:"headings"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &rawHeadings); err != nil {
+		t.Fatalf("unmarshal raw headings: %v\n%s", err, output.String())
+	}
+	if _, ok := rawHeadings.Headings[0]["headingId"]; !ok {
+		t.Fatalf("heading JSON missing headingId: %s", output.String())
+	}
+
+	output.Reset()
+	if err := runKong(t, &DocsParagraphsListCmd{}, []string{"doc1"}, ctx, &RootFlags{Account: "a@b.com"}); err != nil {
+		t.Fatalf("paragraphs run: %v", err)
+	}
+	var paragraphs struct {
+		Paragraphs []docsParagraphInspectItem `json:"paragraphs"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &paragraphs); err != nil {
+		t.Fatalf("unmarshal paragraphs: %v\n%s", err, output.String())
+	}
+	if len(paragraphs.Paragraphs) != 2 || paragraphs.Paragraphs[0].HeadingID != "h.section" {
+		t.Fatalf("paragraphs = %#v", paragraphs.Paragraphs)
+	}
+	if paragraphs.Paragraphs[1].HeadingID != "" {
+		t.Fatalf("normal paragraph headingId = %q, want empty", paragraphs.Paragraphs[1].HeadingID)
+	}
+	var rawParagraphs struct {
+		Paragraphs []map[string]json.RawMessage `json:"paragraphs"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &rawParagraphs); err != nil {
+		t.Fatalf("unmarshal raw paragraphs: %v\n%s", err, output.String())
+	}
+	if _, ok := rawParagraphs.Paragraphs[0]["headingId"]; !ok {
+		t.Fatalf("heading paragraph JSON missing headingId: %s", output.String())
+	}
+	if _, ok := rawParagraphs.Paragraphs[1]["headingId"]; ok {
+		t.Fatalf("normal paragraph JSON includes empty headingId: %s", output.String())
+	}
+}
+
 func TestDocsParagraphsJSONIncludesRunsAndEmptiness(t *testing.T) {
 	t.Parallel()
 
@@ -436,11 +504,19 @@ func rawTableCell(text string) map[string]any {
 }
 
 func rawStyledParagraph(start, end int64, style, text string) map[string]any {
+	return rawStyledParagraphWithHeadingID(start, end, style, "", text)
+}
+
+func rawStyledParagraphWithHeadingID(start, end int64, style, headingID, text string) map[string]any {
+	paragraphStyle := map[string]any{"namedStyleType": style}
+	if headingID != "" {
+		paragraphStyle["headingId"] = headingID
+	}
 	return map[string]any{
 		"startIndex": start,
 		"endIndex":   end,
 		"paragraph": map[string]any{
-			"paragraphStyle": map[string]any{"namedStyleType": style},
+			"paragraphStyle": paragraphStyle,
 			"elements": []any{
 				map[string]any{
 					"startIndex": start,
