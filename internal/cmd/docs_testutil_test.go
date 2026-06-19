@@ -20,17 +20,36 @@ import (
 )
 
 type docsBatchUpdateCapture struct {
-	GetCalls int
-	Requests [][]*docs.Request
+	GetCalls         int
+	IncludeTabsCalls int
+	Requests         [][]*docs.Request
 }
 
 func newDocsBatchUpdateTestService(t *testing.T, document any) (*docs.Service, *docsBatchUpdateCapture) {
 	t.Helper()
 	capture := &docsBatchUpdateCapture{}
+	svc := newDocsBatchUpdateRecordingTestService(
+		t, document, &capture.Requests, &capture.GetCalls, &capture.IncludeTabsCalls,
+	)
+	return svc, capture
+}
+
+func newDocsBatchUpdateRecordingTestService(
+	t *testing.T,
+	document any,
+	requests *[][]*docs.Request,
+	getCalls, includeTabsCalls *int,
+) *docs.Service {
+	t.Helper()
 	svc, _ := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/documents/"):
-			capture.GetCalls++
+			if getCalls != nil {
+				*getCalls++
+			}
+			if includeTabsCalls != nil && r.URL.Query().Get("includeTabsContent") == "true" {
+				*includeTabsCalls++
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(document)
 		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, ":batchUpdate"):
@@ -40,14 +59,25 @@ func newDocsBatchUpdateTestService(t *testing.T, document any) (*docs.Service, *
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			capture.Requests = append(capture.Requests, request.Requests)
+			if requests != nil {
+				*requests = append(*requests, request.Requests)
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"documentId":"doc1"}`))
 		default:
 			http.NotFound(w, r)
 		}
 	}))
-	return svc, capture
+	return svc
+}
+
+func docsBodyWithEndIndex(endIndex int64) map[string]any {
+	return map[string]any{
+		"documentId": "doc1",
+		"body": map[string]any{"content": []any{
+			map[string]any{"startIndex": 1, "endIndex": endIndex},
+		}},
+	}
 }
 
 func newDocsDocumentTestService(t *testing.T, document any, includeTabs *string) *docs.Service {

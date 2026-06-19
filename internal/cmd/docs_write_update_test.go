@@ -18,37 +18,7 @@ func TestDocsWriteUpdate_JSON(t *testing.T) {
 
 	var batchRequests [][]*docs.Request
 
-	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch {
-		case r.Method == http.MethodPost && strings.Contains(path, ":batchUpdate"):
-			var req docs.BatchUpdateDocumentRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("decode request: %v", err)
-			}
-			batchRequests = append(batchRequests, req.Requests)
-			id := strings.TrimSuffix(strings.TrimPrefix(path, "/v1/documents/"), ":batchUpdate")
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"documentId": id})
-			return
-		case r.Method == http.MethodGet && strings.HasPrefix(path, "/v1/documents/"):
-			id := strings.TrimPrefix(path, "/v1/documents/")
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"documentId": id,
-				"body": map[string]any{
-					"content": []any{
-						map[string]any{"startIndex": 1, "endIndex": 12},
-					},
-				},
-			})
-			return
-		default:
-			http.NotFound(w, r)
-			return
-		}
-	}))
-	defer cleanup()
+	docSvc := newDocsBatchUpdateRecordingTestService(t, docsBodyWithEndIndex(12), &batchRequests, nil, nil)
 
 	flags := &RootFlags{Account: "a@b.com"}
 	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
@@ -115,31 +85,9 @@ func TestDocsUpdate_MarkdownWithTab(t *testing.T) {
 	var batchRequests [][]*docs.Request
 	var includeTabsCalls int
 
-	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch {
-		case r.Method == http.MethodGet && strings.HasPrefix(path, "/v1/documents/"):
-			if strings.Contains(r.URL.RawQuery, "includeTabsContent=true") {
-				includeTabsCalls++
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(tabsDocWithEndIndex())
-			return
-		case r.Method == http.MethodPost && strings.Contains(path, ":batchUpdate"):
-			var req docs.BatchUpdateDocumentRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("decode request: %v", err)
-			}
-			batchRequests = append(batchRequests, req.Requests)
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"documentId": "doc1"})
-			return
-		default:
-			http.NotFound(w, r)
-			return
-		}
-	}))
-	defer cleanup()
+	docSvc := newDocsBatchUpdateRecordingTestService(
+		t, tabsDocWithEndIndex(), &batchRequests, nil, &includeTabsCalls,
+	)
 
 	flags := &RootFlags{Account: "a@b.com"}
 	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
@@ -349,28 +297,7 @@ func TestDocsUpdate_ReplaceRangePlainWithTab(t *testing.T) {
 
 	var batchRequests [][]*docs.Request
 
-	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch {
-		case r.Method == http.MethodGet && strings.HasPrefix(path, "/v1/documents/"):
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(tabsDocWithEndIndex())
-			return
-		case r.Method == http.MethodPost && strings.Contains(path, ":batchUpdate"):
-			var req docs.BatchUpdateDocumentRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("decode request: %v", err)
-			}
-			batchRequests = append(batchRequests, req.Requests)
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"documentId": "doc1"})
-			return
-		default:
-			http.NotFound(w, r)
-			return
-		}
-	}))
-	defer cleanup()
+	docSvc := newDocsBatchUpdateRecordingTestService(t, tabsDocWithEndIndex(), &batchRequests, nil, nil)
 
 	flags := &RootFlags{Account: "a@b.com"}
 	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
@@ -402,31 +329,9 @@ func TestDocsUpdate_ReplaceRangeMarkdownWithTab(t *testing.T) {
 	var batchRequests [][]*docs.Request
 	var includeTabsCalls int
 
-	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch {
-		case r.Method == http.MethodGet && strings.HasPrefix(path, "/v1/documents/"):
-			if strings.Contains(r.URL.RawQuery, "includeTabsContent=true") {
-				includeTabsCalls++
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(tabsDocWithEndIndex())
-			return
-		case r.Method == http.MethodPost && strings.Contains(path, ":batchUpdate"):
-			var req docs.BatchUpdateDocumentRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("decode request: %v", err)
-			}
-			batchRequests = append(batchRequests, req.Requests)
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"documentId": "doc1"})
-			return
-		default:
-			http.NotFound(w, r)
-			return
-		}
-	}))
-	defer cleanup()
+	docSvc := newDocsBatchUpdateRecordingTestService(
+		t, tabsDocWithEndIndex(), &batchRequests, nil, &includeTabsCalls,
+	)
 
 	flags := &RootFlags{Account: "a@b.com"}
 	var output bytes.Buffer
@@ -490,37 +395,7 @@ func TestDocsWriteUpdate_Pageless(t *testing.T) {
 
 	var batchRequests [][]*docs.Request
 
-	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch {
-		case r.Method == http.MethodPost && strings.Contains(path, ":batchUpdate"):
-			var req docs.BatchUpdateDocumentRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("decode request: %v", err)
-			}
-			batchRequests = append(batchRequests, req.Requests)
-			id := strings.TrimSuffix(strings.TrimPrefix(path, "/v1/documents/"), ":batchUpdate")
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"documentId": id})
-			return
-		case r.Method == http.MethodGet && strings.HasPrefix(path, "/v1/documents/"):
-			id := strings.TrimPrefix(path, "/v1/documents/")
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"documentId": id,
-				"body": map[string]any{
-					"content": []any{
-						map[string]any{"startIndex": 1, "endIndex": 12},
-					},
-				},
-			})
-			return
-		default:
-			http.NotFound(w, r)
-			return
-		}
-	}))
-	defer cleanup()
+	docSvc := newDocsBatchUpdateRecordingTestService(t, docsBodyWithEndIndex(12), &batchRequests, nil, nil)
 
 	flags := &RootFlags{Account: "a@b.com"}
 	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
@@ -556,31 +431,7 @@ func TestDocsWrite_PageSizeAndMargins(t *testing.T) {
 	t.Parallel()
 
 	var batchRequests [][]*docs.Request
-
-	docSvc, cleanup := newDocsServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch {
-		case r.Method == http.MethodPost && strings.Contains(path, ":batchUpdate"):
-			var req docs.BatchUpdateDocumentRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Fatalf("decode request: %v", err)
-			}
-			batchRequests = append(batchRequests, req.Requests)
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"documentId": "doc1"})
-		case r.Method == http.MethodGet && strings.HasPrefix(path, "/v1/documents/"):
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"documentId": "doc1",
-				"body": map[string]any{
-					"content": []any{map[string]any{"startIndex": 1, "endIndex": 2}},
-				},
-			})
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	defer cleanup()
+	docSvc := newDocsBatchUpdateRecordingTestService(t, docsBodyWithEndIndex(2), &batchRequests, nil, nil)
 
 	flags := &RootFlags{Account: "a@b.com"}
 	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
